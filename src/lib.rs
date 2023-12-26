@@ -6,17 +6,15 @@ use std::{
 };
 
 extern "C" {
-    fn solver_new() -> *mut c_void;
-    fn solver_free(s: *mut c_void);
-    fn solver_add_clause(s: *mut c_void, clause: *mut c_int, len: c_int);
-    fn solver_solve(s: *mut c_void, assumps: *mut c_int, len: c_int) -> c_int;
-    fn solver_constrain(s: *mut c_void, constrain: *mut c_int, len: c_int);
-    // fn solver_simplify(s: *mut c_void) -> bool;
-    // fn solver_set_random_seed(s: *mut c_void, seed: f64);
-    // fn solver_set_rnd_init_act(s: *mut c_void, enable: bool);
+    fn cadical_solver_new() -> *mut c_void;
+    fn cadical_solver_free(s: *mut c_void);
+    fn cadical_solver_add_clause(s: *mut c_void, clause: *mut c_int, len: c_int);
+    fn cadical_solver_solve(s: *mut c_void, assumps: *mut c_int, len: c_int) -> c_int;
+    fn cadical_solver_constrain(s: *mut c_void, constrain: *mut c_int, len: c_int);
+    fn cadical_solver_simplify(s: *mut c_void);
     // fn solver_set_polarity(s: *mut c_void, var: c_int, pol: c_int);
-    fn solver_model_value(s: *mut c_void, lit: c_int) -> c_int;
-    fn solver_conflict_has(s: *mut c_void, lit: c_int) -> bool;
+    fn cadical_solver_model_value(s: *mut c_void, lit: c_int) -> c_int;
+    fn cadical_solver_conflict_has(s: *mut c_void, lit: c_int) -> bool;
 }
 
 fn lit_to_cadical_lit(lit: &Lit) -> i32 {
@@ -35,7 +33,7 @@ pub struct Model<'a> {
 impl Model<'_> {
     pub fn lit_value(&self, lit: Lit) -> bool {
         let lit = lit_to_cadical_lit(&lit);
-        let res = unsafe { solver_model_value(self.solver, lit) };
+        let res = unsafe { cadical_solver_model_value(self.solver, lit) };
         if res == lit {
             true
         } else if res == -lit {
@@ -54,7 +52,7 @@ pub struct Conflict<'a> {
 impl Conflict<'_> {
     pub fn has(&self, lit: Lit) -> bool {
         let lit = lit_to_cadical_lit(&lit);
-        unsafe { solver_conflict_has(self.solver, lit) }
+        unsafe { cadical_solver_conflict_has(self.solver, lit) }
     }
 }
 
@@ -80,7 +78,7 @@ pub struct Solver {
 impl Solver {
     pub fn new() -> Self {
         Self {
-            solver: unsafe { solver_new() },
+            solver: unsafe { cadical_solver_new() },
             num_var: 0,
         }
     }
@@ -96,12 +94,14 @@ impl Solver {
 
     pub fn add_clause(&mut self, clause: &[Lit]) {
         let clause: Vec<i32> = clause.iter().map(lit_to_cadical_lit).collect();
-        unsafe { solver_add_clause(self.solver, clause.as_ptr() as _, clause.len() as _) }
+        unsafe { cadical_solver_add_clause(self.solver, clause.as_ptr() as _, clause.len() as _) }
     }
 
     pub fn solve<'a>(&'a mut self, assumps: &[Lit]) -> SatResult<'a> {
         let assumps: Vec<i32> = assumps.iter().map(lit_to_cadical_lit).collect();
-        match unsafe { solver_solve(self.solver, assumps.as_ptr() as _, assumps.len() as _) } {
+        match unsafe {
+            cadical_solver_solve(self.solver, assumps.as_ptr() as _, assumps.len() as _)
+        } {
             10 => SatResult::Sat(Model {
                 solver: self.solver,
                 _pd: PhantomData,
@@ -120,15 +120,15 @@ impl Solver {
         constrain: &[Lit],
     ) -> SatResult<'a> {
         let constrain: Vec<i32> = constrain.iter().map(lit_to_cadical_lit).collect();
-        unsafe { solver_constrain(self.solver, constrain.as_ptr() as _, constrain.len() as _) };
+        unsafe {
+            cadical_solver_constrain(self.solver, constrain.as_ptr() as _, constrain.len() as _)
+        };
         self.solve(assumps)
     }
 
-    // pub fn simplify(&mut self) {
-    //     if !unsafe { solver_simplify(self.solver) } {
-    //         println!("warning: minisat simplify fail");
-    //     }
-    // }
+    pub fn simplify(&mut self) {
+        unsafe { cadical_solver_simplify(self.solver) };
+    }
 
     // pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
     //     let pol = match pol {
@@ -168,7 +168,7 @@ impl Solver {
 
 impl Drop for Solver {
     fn drop(&mut self) {
-        unsafe { solver_free(self.solver) }
+        unsafe { cadical_solver_free(self.solver) }
     }
 }
 
@@ -196,6 +196,7 @@ fn test() {
         }
         SatResult::Unsat(_) => todo!(),
     }
+    solver.simplify();
     match solver.solve_with_constrain(&[lit2], &[!lit0]) {
         SatResult::Sat(_) => panic!(),
         SatResult::Unsat(conflict) => {
