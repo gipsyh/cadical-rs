@@ -31,15 +31,15 @@ pub struct Model<'a> {
 }
 
 impl Model<'_> {
-    pub fn lit_value(&self, lit: Lit) -> bool {
+    pub fn lit_value(&self, lit: Lit) -> Option<bool> {
         let lit = lit_to_cadical_lit(&lit);
         let res = unsafe { cadical_solver_model_value(self.solver, lit) };
         if res == lit {
-            true
+            Some(true)
         } else if res == -lit {
-            false
+            Some(false)
         } else {
-            todo!()
+            None
         }
     }
 }
@@ -190,9 +190,9 @@ fn test() {
     solver.add_clause(&Clause::from([!lit0, !lit1, lit2]));
     match solver.solve(&[lit2]) {
         SatResult::Sat(model) => {
-            assert!(model.lit_value(lit0));
-            assert!(model.lit_value(lit1));
-            assert!(model.lit_value(lit2));
+            assert!(model.lit_value(lit0).unwrap());
+            assert!(model.lit_value(lit1).unwrap());
+            assert!(model.lit_value(lit2).unwrap());
         }
         SatResult::Unsat(_) => todo!(),
     }
