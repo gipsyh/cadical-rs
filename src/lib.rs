@@ -1,5 +1,5 @@
 use logic_form::{Lit, Var};
-use satif::{SatResult, Satif, SatifConflict, SatifModel};
+use satif::{SatResult, Satif, SatifSat, SatifUnsat};
 use std::ffi::{c_int, c_void};
 
 extern "C" {
@@ -22,11 +22,11 @@ fn lit_to_cadical_lit(lit: &Lit) -> i32 {
     res
 }
 
-pub struct Model {
+pub struct Sat {
     solver: *mut c_void,
 }
 
-impl SatifModel for Model {
+impl SatifSat for Sat {
     fn lit_value(&self, lit: Lit) -> Option<bool> {
         let lit = lit_to_cadical_lit(&lit);
         let res = unsafe { cadical_solver_model_value(self.solver, lit) };
@@ -40,11 +40,11 @@ impl SatifModel for Model {
     }
 }
 
-pub struct Conflict {
+pub struct Unsat {
     solver: *mut c_void,
 }
 
-impl SatifConflict for Conflict {
+impl SatifUnsat for Unsat {
     fn has(&self, lit: Lit) -> bool {
         let lit = lit_to_cadical_lit(&lit);
         unsafe { cadical_solver_conflict_has(self.solver, lit) }
@@ -57,9 +57,8 @@ pub struct Solver {
 }
 
 impl Satif for Solver {
-    type Model = Model;
-
-    type Conflict = Conflict;
+    type Sat = Sat;
+    type Unsat = Unsat;
 
     #[inline]
     fn new() -> Self {
@@ -86,15 +85,15 @@ impl Satif for Solver {
         unsafe { cadical_solver_add_clause(self.solver, clause.as_ptr() as _, clause.len() as _) }
     }
 
-    fn solve(&mut self, assumps: &[Lit]) -> SatResult<Self::Model, Self::Conflict> {
+    fn solve(&mut self, assumps: &[Lit]) -> SatResult<Self::Sat, Self::Unsat> {
         let assumps: Vec<i32> = assumps.iter().map(lit_to_cadical_lit).collect();
         match unsafe {
             cadical_solver_solve(self.solver, assumps.as_ptr() as _, assumps.len() as _)
         } {
-            10 => SatResult::Sat(Model {
+            10 => SatResult::Sat(Sat {
                 solver: self.solver,
             }),
-            20 => SatResult::Unsat(Conflict {
+            20 => SatResult::Unsat(Unsat {
                 solver: self.solver,
             }),
             _ => todo!(),
@@ -138,16 +137,16 @@ impl Solver {
 
     /// # Safety
     /// unsafe get sat model
-    pub unsafe fn get_model(&self) -> Model {
-        Model {
+    pub unsafe fn get_model(&self) -> Sat {
+        Sat {
             solver: self.solver,
         }
     }
 
     /// # Safety
     /// unsafe get unsat core
-    pub unsafe fn get_conflict(&self) -> Conflict {
-        Conflict {
+    pub unsafe fn get_conflict(&self) -> Unsat {
+        Unsat {
             solver: self.solver,
         }
     }
