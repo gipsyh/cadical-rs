@@ -1,3 +1,5 @@
+pub mod craig;
+
 use logic_form::{Lit, Var};
 use satif::{SatResult, Satif, SatifSat, SatifUnsat};
 use std::ffi::{c_int, c_void};
@@ -12,6 +14,7 @@ extern "C" {
     // fn solver_set_polarity(s: *mut c_void, var: c_int, pol: c_int);
     fn cadical_solver_model_value(s: *mut c_void, lit: c_int) -> c_int;
     fn cadical_solver_conflict_has(s: *mut c_void, lit: c_int) -> bool;
+    fn cadical_craig_test();
 }
 
 fn lit_to_cadical_lit(lit: &Lit) -> i32 {
@@ -20,6 +23,12 @@ fn lit_to_cadical_lit(lit: &Lit) -> i32 {
         res = -res;
     }
     res
+}
+
+fn cadical_lit_to_lit(lit: i32) -> Lit {
+    let p = lit > 0;
+    let v = Var::new(lit.abs() as usize - 1);
+    Lit::new(v, p)
 }
 
 pub struct Sat {
@@ -193,4 +202,9 @@ fn test() {
     //     SatResult::Sat(_) => {}
     //     SatResult::Unsat(_) => todo!(),
     // }
+}
+
+#[test]
+fn test_craig() {
+    unsafe { cadical_craig_test() };
 }

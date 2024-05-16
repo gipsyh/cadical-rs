@@ -6,7 +6,7 @@ enable_language(C CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 add_library(bindings binding.cpp)
-target_include_directories(bindings PUBLIC ../cadical/src/)
+target_include_directories(bindings PUBLIC ../cadical/src/ ../cadical/contrib/)
 
 target_link_libraries(bindings PRIVATE ${CMAKE_SOURCE_DIR}/libcadical.a)
 
