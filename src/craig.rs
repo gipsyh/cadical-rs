@@ -85,11 +85,12 @@ impl Craig {
         self.solver.add_clause(clause);
     }
 
-    pub fn interpolant(&mut self) -> Cnf {
+    pub fn interpolant(&mut self, next_var: usize) -> Cnf {
         unsafe {
             let mut cnf = Cnf::new();
             let mut len = 0;
-            let mut next_var = self.solver.num_var() as i32 + 1;
+            let mut next_var = next_var as i32;
+            next_var += 1;
             let clauses: *mut usize = cadical_craig_create_craig_interpolant(
                 self.craig,
                 &mut next_var as *mut _,
@@ -142,5 +143,5 @@ fn test() {
     );
     craig.add_clause(&[Lit::new(Var(3), false)], ClauseLabel::B);
     dbg!(craig.solver.solve(&[]));
-    dbg!(craig.interpolant());
+    dbg!(craig.interpolant(4));
 }
