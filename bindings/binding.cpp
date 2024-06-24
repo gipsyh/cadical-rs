@@ -65,7 +65,7 @@ void *cadical_craig_new(void *s)
 	Solver *solver = (Solver *)s;
 	CaDiCraig::CraigTracer *tracer = new CaDiCraig::CraigTracer();
 	solver->connect_proof_tracer(tracer, true);
-	tracer->set_craig_construction(CaDiCraig::CraigConstruction::ASYMMETRIC);
+	tracer->set_craig_construction(CaDiCraig::CraigConstruction::ALL);
 	return tracer;
 }
 
@@ -77,14 +77,14 @@ void cadical_craig_free(void *c)
 
 void cadical_craig_label_var(void *c, int var, uint8_t t)
 {
-	printf("var_label: %d %d\n", var, t);
+	// printf("var_label: %d %d\n", var, t);
 	CaDiCraig::CraigTracer *tracer = (CaDiCraig::CraigTracer *)c;
 	tracer->label_variable(var, (CaDiCraig::CraigVarType)t);
 }
 
 void cadical_craig_label_clause(void *c, int id, uint8_t t)
 {
-	printf("clause_label: %d %d\n", id, t);
+	// printf("clause_label: %d %d\n", id, t);
 	CaDiCraig::CraigTracer *tracer = (CaDiCraig::CraigTracer *)c;
 	tracer->label_clause(id, (CaDiCraig::CraigClauseType)t);
 }

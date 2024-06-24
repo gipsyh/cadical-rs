@@ -123,9 +123,9 @@ impl Solver {
     //     self.solve(assumps)
     // }
 
-    // pub fn simplify(&mut self) {
-    //     unsafe { cadical_solver_simplify(self.solver) };
-    // }
+    pub fn simplify(&mut self) {
+        unsafe { cadical_solver_simplify(self.solver) };
+    }
 
     // pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
     //     let pol = match pol {

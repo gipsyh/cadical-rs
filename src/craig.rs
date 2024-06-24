@@ -24,6 +24,7 @@ extern "C" {
     // fn cadical_craig_test();
 }
 
+#[derive(Clone, Copy)]
 pub enum VarLabel {
     A,
     B,
@@ -40,6 +41,7 @@ impl Into<u8> for VarLabel {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum ClauseLabel {
     A,
     B,
