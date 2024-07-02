@@ -1,4 +1,4 @@
-use logic_form::{Clause, Cnf, Lit, Var};
+use logic_form::{Clause, Lit, Var};
 use satif::Satif;
 
 use crate::{cadical_lit_to_lit, Solver};
@@ -87,9 +87,9 @@ impl Craig {
         self.solver.add_clause(clause);
     }
 
-    pub fn interpolant(&mut self, next_var: usize) -> Cnf {
+    pub fn interpolant(&mut self, next_var: usize) -> Vec<Clause> {
         unsafe {
-            let mut cnf = Cnf::new();
+            let mut cnf = Vec::new();
             let mut len = 0;
             let mut next_var = next_var as i32;
             next_var += 1;
@@ -104,7 +104,7 @@ impl Craig {
                 let len = clauses[i + 1];
                 let cls: Vec<i32> = Vec::from_raw_parts(data, len, len);
                 let cls: Vec<Lit> = cls.into_iter().map(|l| cadical_lit_to_lit(l)).collect();
-                cnf.add_clause(Clause::from(cls));
+                cnf.push(Clause::from(cls));
             }
             cnf
         }
