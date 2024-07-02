@@ -11,7 +11,7 @@ extern "C" {
     fn cadical_solver_solve(s: *mut c_void, assumps: *mut c_int, len: c_int) -> c_int;
     // fn cadical_solver_constrain(s: *mut c_void, constrain: *mut c_int, len: c_int);
     fn cadical_solver_simplify(s: *mut c_void);
-    fn cadical_solver_fixed(s: *mut c_void, lit: c_int) -> c_int;
+    fn cadical_solver_freeze(s: *mut c_void, lit: c_int);
     fn solver_set_polarity(s: *mut c_void, var: c_int, pol: c_int);
     fn cadical_solver_model_value(s: *mut c_void, lit: c_int) -> c_int;
     fn cadical_solver_conflict_has(s: *mut c_void, lit: c_int) -> bool;
@@ -124,6 +124,11 @@ impl Solver {
     //     self.solve(assumps)
     // }
 
+    pub fn set_frozen(&mut self, var: Var, frozen: bool) {
+        assert!(frozen);
+        unsafe { cadical_solver_freeze(self.solver, lit_to_cadical_lit(&var.lit())) }
+    }
+
     pub fn simplify(&mut self) {
         unsafe { cadical_solver_simplify(self.solver) };
     }
@@ -163,16 +168,6 @@ impl Solver {
 
     pub fn clauses(&self) -> Vec<Clause> {
         let mut cnf = Vec::new();
-
-        for v in 0..self.num_var {
-            let lit = Var::new(v).lit();
-            match unsafe { cadical_solver_fixed(self.solver, lit_to_cadical_lit(&lit)) } {
-                1 => cnf.push(Clause::from([lit])),
-                0 => (),
-                -1 => cnf.push(Clause::from([!lit])),
-                _ => panic!(),
-            }
-        }
         unsafe {
             let mut len = 0;
             let clauses: *mut usize = cadical_solver_clauses(self.solver, &mut len as *mut _) as _;

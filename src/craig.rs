@@ -14,14 +14,6 @@ extern "C" {
         next_var: *mut c_int,
         len: *mut c_int,
     ) -> *mut c_void;
-    // fn cadical_solver_add_clause(s: *mut c_void, clause: *mut c_int, len: c_int);
-    // fn cadical_solver_solve(s: *mut c_void, assumps: *mut c_int, len: c_int) -> c_int;
-    // // fn cadical_solver_constrain(s: *mut c_void, constrain: *mut c_int, len: c_int);
-    // // fn cadical_solver_simplify(s: *mut c_void);
-    // // fn solver_set_polarity(s: *mut c_void, var: c_int, pol: c_int);
-    // fn cadical_solver_model_value(s: *mut c_void, lit: c_int) -> c_int;
-    // fn cadical_solver_conflict_has(s: *mut c_void, lit: c_int) -> bool;
-    // fn cadical_craig_test();
 }
 
 #[derive(Clone, Copy)]

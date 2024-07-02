@@ -62,9 +62,14 @@ int cadical_solver_simplify(void *s)
 
 int cadical_solver_fixed(void *s, int lit)
 {
-	printf("fixed: %d\n", lit);
 	Solver *slv = (Solver *)s;
 	return slv->fixed(lit);
+}
+
+void cadical_solver_freeze(void *s, int lit)
+{
+	Solver *slv = (Solver *)s;
+	slv->freeze(lit);
 }
 
 struct ClauseIter : ClauseIterator {
