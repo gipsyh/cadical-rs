@@ -60,6 +60,43 @@ int cadical_solver_simplify(void *s)
 	return slv->simplify();
 }
 
+int cadical_solver_fixed(void *s, int lit)
+{
+	printf("fixed: %d\n", lit);
+	Solver *slv = (Solver *)s;
+	return slv->fixed(lit);
+}
+
+struct ClauseIter : ClauseIterator {
+	bool clause(const std::vector<int> &c)
+	{
+		std::vector<int> *cls = new std::vector<int>;
+		for (auto &lit : c)
+			cls->push_back(lit);
+		clauses->push_back(cls->data());
+		clauses->push_back((void *)cls->size());
+		return true;
+	}
+
+	std::vector<void *> *clauses;
+};
+
+void *cadical_solver_clauses(void *s, int *len)
+{
+	ClauseIter clause_iter;
+	Solver *slv = (Solver *)s;
+	clause_iter.clauses = new std::vector<void *>();
+	slv->traverse_clauses(clause_iter);
+	// for (Minisat::TrailIterator c = slv->trailBegin(); c != slv->trailEnd(); ++c) {
+	// 	std::vector<Lit> *cls_ = new std::vector<Lit>;
+	// 	cls_->push_back(*c);
+	// 	clauses->push_back(cls_->data());
+	// 	clauses->push_back((void *)cls_->size());
+	// }
+	*len = clause_iter.clauses->size();
+	return clause_iter.clauses->data();
+}
+
 void *cadical_craig_new(void *s)
 {
 	Solver *solver = (Solver *)s;

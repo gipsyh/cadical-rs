@@ -1,6 +1,6 @@
 pub mod craig;
 
-use logic_form::{Lit, Var};
+use logic_form::{Clause, Lit, Var};
 use satif::{SatResult, Satif, SatifSat, SatifUnsat};
 use std::ffi::{c_int, c_void};
 
@@ -11,10 +11,11 @@ extern "C" {
     fn cadical_solver_solve(s: *mut c_void, assumps: *mut c_int, len: c_int) -> c_int;
     // fn cadical_solver_constrain(s: *mut c_void, constrain: *mut c_int, len: c_int);
     fn cadical_solver_simplify(s: *mut c_void);
-    // fn solver_set_polarity(s: *mut c_void, var: c_int, pol: c_int);
+    fn cadical_solver_fixed(s: *mut c_void, lit: c_int) -> c_int;
+    fn solver_set_polarity(s: *mut c_void, var: c_int, pol: c_int);
     fn cadical_solver_model_value(s: *mut c_void, lit: c_int) -> c_int;
     fn cadical_solver_conflict_has(s: *mut c_void, lit: c_int) -> bool;
-    fn cadical_craig_test();
+    fn cadical_solver_clauses(s: *mut c_void, len: *mut c_int) -> *mut c_void;
 }
 
 fn lit_to_cadical_lit(lit: &Lit) -> i32 {
@@ -127,14 +128,14 @@ impl Solver {
         unsafe { cadical_solver_simplify(self.solver) };
     }
 
-    // pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
-    //     let pol = match pol {
-    //         Some(true) => 0,
-    //         Some(false) => 1,
-    //         None => 2,
-    //     };
-    //     unsafe { solver_set_polarity(self.solver, var.into(), pol) }
-    // }
+    pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
+        let pol = match pol {
+            Some(true) => 0,
+            Some(false) => 1,
+            None => 2,
+        };
+        unsafe { solver_set_polarity(self.solver, var.into(), pol) }
+    }
 
     // pub fn set_random_seed(&mut self, seed: f64) {
     //     unsafe { solver_set_random_seed(self.solver, seed) }
@@ -158,6 +159,35 @@ impl Solver {
         Unsat {
             solver: self.solver,
         }
+    }
+
+    pub fn clauses(&self) -> Vec<Clause> {
+        let mut cnf = Vec::new();
+
+        for v in 0..self.num_var {
+            let lit = Var::new(v).lit();
+            match unsafe { cadical_solver_fixed(self.solver, lit_to_cadical_lit(&lit)) } {
+                1 => cnf.push(Clause::from([lit])),
+                0 => (),
+                -1 => cnf.push(Clause::from([!lit])),
+                _ => panic!(),
+            }
+        }
+        unsafe {
+            let mut len = 0;
+            let clauses: *mut usize = cadical_solver_clauses(self.solver, &mut len as *mut _) as _;
+            if len > 0 {
+                let clauses = Vec::from_raw_parts(clauses, len as _, len as _);
+                for i in (0..clauses.len()).step_by(2) {
+                    let data = clauses[i] as *mut i32;
+                    let len = clauses[i + 1];
+                    let cls = Vec::from_raw_parts(data, len, len);
+                    let cls: Vec<Lit> = cls.into_iter().map(cadical_lit_to_lit).collect();
+                    cnf.push(Clause::from(cls));
+                }
+            }
+        }
+        cnf
     }
 }
 
@@ -202,9 +232,4 @@ fn test() {
     //     SatResult::Sat(_) => {}
     //     SatResult::Unsat(_) => todo!(),
     // }
-}
-
-#[test]
-fn test_craig() {
-    unsafe { cadical_craig_test() };
 }
