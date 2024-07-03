@@ -12,7 +12,8 @@ extern "C" {
     // fn cadical_solver_constrain(s: *mut c_void, constrain: *mut c_int, len: c_int);
     fn cadical_solver_simplify(s: *mut c_void);
     fn cadical_solver_freeze(s: *mut c_void, lit: c_int);
-    fn solver_set_polarity(s: *mut c_void, var: c_int, pol: c_int);
+    fn cadical_set_polarity(s: *mut c_void, lit: c_int);
+    fn cadical_unset_polarity(s: *mut c_void, lit: c_int);
     fn cadical_solver_model_value(s: *mut c_void, lit: c_int) -> c_int;
     fn cadical_solver_conflict_has(s: *mut c_void, lit: c_int) -> bool;
     fn cadical_solver_clauses(s: *mut c_void, len: *mut c_int) -> *mut c_void;
@@ -134,21 +135,17 @@ impl Solver {
     }
 
     pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
-        let pol = match pol {
-            Some(true) => 0,
-            Some(false) => 1,
-            None => 2,
+        match pol {
+            Some(p) => {
+                let p = var.lit().not_if(!p);
+                unsafe { cadical_set_polarity(self.solver, lit_to_cadical_lit(&p)) }
+            }
+            None => {
+                unsafe { cadical_unset_polarity(self.solver, lit_to_cadical_lit(&var.lit())) }
+                return;
+            }
         };
-        unsafe { solver_set_polarity(self.solver, var.into(), pol) }
     }
-
-    // pub fn set_random_seed(&mut self, seed: f64) {
-    //     unsafe { solver_set_random_seed(self.solver, seed) }
-    // }
-
-    // pub fn set_rnd_init_act(&mut self, enable: bool) {
-    //     unsafe { solver_set_rnd_init_act(self.solver, enable) }
-    // }
 
     /// # Safety
     /// unsafe get sat model

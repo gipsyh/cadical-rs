@@ -92,14 +92,20 @@ void *cadical_solver_clauses(void *s, int *len)
 	Solver *slv = (Solver *)s;
 	clause_iter.clauses = new std::vector<void *>();
 	slv->traverse_clauses(clause_iter);
-	// for (Minisat::TrailIterator c = slv->trailBegin(); c != slv->trailEnd(); ++c) {
-	// 	std::vector<Lit> *cls_ = new std::vector<Lit>;
-	// 	cls_->push_back(*c);
-	// 	clauses->push_back(cls_->data());
-	// 	clauses->push_back((void *)cls_->size());
-	// }
 	*len = clause_iter.clauses->size();
 	return clause_iter.clauses->data();
+}
+
+void cadical_set_polarity(void *s, int lit)
+{
+	Solver *slv = (Solver *)s;
+	slv->phase(lit);
+}
+
+void cadical_unset_polarity(void *s, int lit)
+{
+	Solver *slv = (Solver *)s;
+	slv->unphase(lit);
 }
 
 void *cadical_craig_new(void *s)
