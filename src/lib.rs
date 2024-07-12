@@ -9,7 +9,7 @@ extern "C" {
     fn cadical_solver_free(s: *mut c_void);
     fn cadical_solver_add_clause(s: *mut c_void, clause: *mut c_int, len: c_int);
     fn cadical_solver_solve(s: *mut c_void, assumps: *mut c_int, len: c_int) -> c_int;
-    // fn cadical_solver_constrain(s: *mut c_void, constrain: *mut c_int, len: c_int);
+    fn cadical_solver_constrain(s: *mut c_void, constrain: *mut c_int, len: c_int);
     fn cadical_solver_simplify(s: *mut c_void);
     fn cadical_solver_freeze(s: *mut c_void, lit: c_int);
     fn cadical_set_polarity(s: *mut c_void, lit: c_int);
@@ -113,17 +113,17 @@ impl Satif for Solver {
 }
 
 impl Solver {
-    // pub fn solve_with_constrain<'a>(
-    //     &'a mut self,
-    //     assumps: &[Lit],
-    //     constrain: &[Lit],
-    // ) -> SatResult<'a> {
-    //     let constrain: Vec<i32> = constrain.iter().map(lit_to_cadical_lit).collect();
-    //     unsafe {
-    //         cadical_solver_constrain(self.solver, constrain.as_ptr() as _, constrain.len() as _)
-    //     };
-    //     self.solve(assumps)
-    // }
+    pub fn solve_with_constrain<'a>(
+        &'a mut self,
+        assumps: &[Lit],
+        constrain: &[Lit],
+    ) -> SatResult<Sat, Unsat> {
+        let constrain: Vec<i32> = constrain.iter().map(lit_to_cadical_lit).collect();
+        unsafe {
+            cadical_solver_constrain(self.solver, constrain.as_ptr() as _, constrain.len() as _)
+        };
+        self.solve(assumps)
+    }
 
     pub fn set_frozen(&mut self, var: Var, frozen: bool) {
         assert!(frozen);
