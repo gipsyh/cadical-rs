@@ -6,7 +6,7 @@ use std::{ffi::c_int, os::raw::c_void};
 
 extern "C" {
     fn cadical_craig_new(s: *mut c_void) -> *mut c_void;
-    fn cadical_craig_free(c: *mut c_void);
+    fn cadical_craig_free(s: *mut c_void, c: *mut c_void);
     fn cadical_craig_label_var(c: *mut c_void, var: i32, t: u8);
     fn cadical_craig_label_clause(c: *mut c_void, id: i32, t: u8);
     fn cadical_craig_create_craig_interpolant(
@@ -103,12 +103,11 @@ impl Craig {
     }
 }
 
-// impl Drop for Craig {
-//     fn drop(&mut self) {
-//         todo!();
-//         unsafe { cadical_craig_free(self.craig) }
-//     }
-// }
+impl Drop for Craig {
+    fn drop(&mut self) {
+        unsafe { cadical_craig_free(self.solver.solver, self.craig) }
+    }
+}
 
 #[test]
 fn test() {

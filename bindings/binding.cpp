@@ -117,9 +117,11 @@ void *cadical_craig_new(void *s)
 	return tracer;
 }
 
-void cadical_craig_free(void *c)
+void cadical_craig_free(void *s, void *c)
 {
+	Solver *solver = (Solver *)s;
 	CaDiCraig::CraigTracer *tracer = (CaDiCraig::CraigTracer *)c;
+	solver->disconnect_proof_tracer(tracer);
 	delete tracer;
 }
 
@@ -204,8 +206,7 @@ void cadical_craig_test()
 	// assert (clauses == std::vector<std::vector<int>>{{-1}});
 	// assert (next_var == 2);
 
-	solver->disconnect_proof_tracer(tracer);
-	cadical_craig_free(tracer);
+	cadical_craig_free(solver, tracer);
 	delete solver;
 }
 }
