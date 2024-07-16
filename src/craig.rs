@@ -49,16 +49,16 @@ impl Into<u8> for ClauseLabel {
 }
 
 pub struct Craig {
-    pub solver: Solver,
+    solver: *mut c_void,
     craig: *mut c_void,
     num_clause: usize,
 }
 
 impl Craig {
-    pub fn new(solver: Solver) -> Self {
+    pub fn new(solver: &mut Solver) -> Self {
         let craig = unsafe { cadical_craig_new(solver.solver) };
         Self {
-            solver,
+            solver: solver.solver,
             craig,
             num_clause: 0,
         }
@@ -67,16 +67,12 @@ impl Craig {
     pub fn label_var(&mut self, var: Var, label: VarLabel) {
         let mut var: i32 = var.into();
         var += 1;
-        while self.solver.num_var < var as _ {
-            self.solver.new_var();
-        }
         unsafe { cadical_craig_label_var(self.craig, var, label.into()) }
     }
 
-    pub fn add_clause(&mut self, clause: &[Lit], label: ClauseLabel) {
+    pub fn label_clause(&mut self, label: ClauseLabel) {
         self.num_clause += 1;
         unsafe { cadical_craig_label_clause(self.craig, self.num_clause as _, label.into()) }
-        self.solver.add_clause(clause);
     }
 
     pub fn interpolant(&mut self, next_var: usize) -> Vec<Clause> {
@@ -105,36 +101,28 @@ impl Craig {
 
 impl Drop for Craig {
     fn drop(&mut self) {
-        unsafe { cadical_craig_free(self.solver.solver, self.craig) }
+        unsafe { cadical_craig_free(self.solver, self.craig) }
     }
 }
 
 #[test]
 fn test() {
-    let solver = Solver::new();
-    let mut craig = Craig::new(solver);
-    craig.label_var(Var::new(0), VarLabel::A);
+    let mut solver = Solver::new();
+    let mut craig = Craig::new(&mut solver);
     craig.label_var(Var::new(1), VarLabel::Global);
     craig.label_var(Var::new(2), VarLabel::Global);
-    craig.label_var(Var::new(3), VarLabel::B);
-    craig.add_clause(
-        &[Lit::new(Var(0), true), Lit::new(Var(1), false)],
-        ClauseLabel::A,
-    );
-    craig.add_clause(
-        &[Lit::new(Var(0), false), Lit::new(Var(2), false)],
-        ClauseLabel::A,
-    );
-    craig.add_clause(&[Lit::new(Var(1), true)], ClauseLabel::A);
-    craig.add_clause(
-        &[Lit::new(Var(1), false), Lit::new(Var(2), true)],
-        ClauseLabel::B,
-    );
-    craig.add_clause(
-        &[Lit::new(Var(1), true), Lit::new(Var(3), true)],
-        ClauseLabel::B,
-    );
-    craig.add_clause(&[Lit::new(Var(3), false)], ClauseLabel::B);
-    dbg!(craig.solver.solve(&[]));
+    craig.label_clause(ClauseLabel::A);
+    solver.add_clause(&[Lit::new(Var(0), true), Lit::new(Var(1), false)]);
+    craig.label_clause(ClauseLabel::A);
+    solver.add_clause(&[Lit::new(Var(0), false), Lit::new(Var(2), false)]);
+    craig.label_clause(ClauseLabel::A);
+    solver.add_clause(&[Lit::new(Var(1), true)]);
+    craig.label_clause(ClauseLabel::B);
+    solver.add_clause(&[Lit::new(Var(1), false), Lit::new(Var(2), true)]);
+    craig.label_clause(ClauseLabel::B);
+    solver.add_clause(&[Lit::new(Var(1), true), Lit::new(Var(3), true)]);
+    craig.label_clause(ClauseLabel::B);
+    solver.add_clause(&[Lit::new(Var(3), false)]);
+    dbg!(solver.solve(&[]));
     dbg!(craig.interpolant(4));
 }

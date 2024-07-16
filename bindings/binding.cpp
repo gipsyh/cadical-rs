@@ -113,7 +113,7 @@ void *cadical_craig_new(void *s)
 	Solver *solver = (Solver *)s;
 	CaDiCraig::CraigTracer *tracer = new CaDiCraig::CraigTracer();
 	solver->connect_proof_tracer(tracer, true);
-	tracer->set_craig_construction(CaDiCraig::CraigConstruction::ALL);
+	tracer->set_craig_construction(CaDiCraig::CraigConstruction::ASYMMETRIC);
 	return tracer;
 }
 
