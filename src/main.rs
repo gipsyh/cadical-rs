@@ -43,4 +43,5 @@ fn main() {
     itp.label_clause(false);
     solver.add_clause(&[Lit::new(Var(1), true)]);
     dbg!(solver.solve(&[]));
+    solver.disconnect_tracer(&itp);
 }

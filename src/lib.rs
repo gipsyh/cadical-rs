@@ -4,7 +4,10 @@ pub mod tracer;
 
 use logic_form::{Clause, Lit, Var};
 use satif::{SatResult, Satif, SatifSat, SatifUnsat};
-use std::ffi::{c_int, c_void};
+use std::{
+    collections::HashMap,
+    ffi::{c_int, c_void},
+};
 
 extern "C" {
     fn cadical_solver_new() -> *mut c_void;
@@ -67,6 +70,7 @@ impl SatifUnsat for Unsat {
 pub struct Solver {
     solver: *mut c_void,
     num_var: usize,
+    tracer_map: HashMap<*const c_void, *const c_void>,
 }
 
 impl Satif for Solver {
@@ -78,6 +82,7 @@ impl Satif for Solver {
         Self {
             solver: unsafe { cadical_solver_new() },
             num_var: 0,
+            tracer_map: HashMap::default(),
         }
     }
 
@@ -187,7 +192,7 @@ impl Solver {
 
 impl Drop for Solver {
     fn drop(&mut self) {
-        unsafe { cadical_solver_free(self.solver) }
+        unsafe { cadical_solver_free(self.solver) };
     }
 }
 

@@ -10,7 +10,9 @@ extern "C" {
         add_original_clause: *mut c_void,
         delete_clause: *mut c_void,
         conclude_unsat: *mut c_void,
-    );
+    ) -> *mut c_void;
+
+    fn cadical_tracer_free(s: *mut c_void, t: *const c_void);
 }
 
 #[allow(unused)]
@@ -26,21 +28,30 @@ pub trait Tracer {
 
 impl Solver {
     pub fn connect_tracer<T: Tracer>(&mut self, tracer: &Box<T>) {
-        let tracer = tracer.as_ref() as *const T;
+        let t = tracer.as_ref() as *const T;
         let add_original_clause = add_original_clause::<T>;
         let add_derived_clause = add_derived_clause::<T>;
         let delete_clause = delete_clause::<T>;
         let conclude_unsat = conclude_unsat::<T>;
-        unsafe {
+        let it = unsafe {
             cadical_tracer_new(
                 self.solver,
-                tracer as _,
+                t as _,
                 add_original_clause as _,
                 add_derived_clause as _,
                 delete_clause as _,
                 conclude_unsat as _,
             )
-        }
+        };
+        self.tracer_map.insert(t as *mut c_void, it);
+    }
+
+    pub fn disconnect_tracer<T: Tracer>(&mut self, tracer: &Box<T>) {
+        let it = self
+            .tracer_map
+            .remove(&(tracer.as_ref() as *const T as *const c_void))
+            .unwrap();
+        unsafe { cadical_tracer_free(self.solver, it) };
     }
 }
 
@@ -95,9 +106,5 @@ pub extern "C" fn conclude_unsat<T: Tracer>(
 ) {
     let tracer = unsafe { &mut *(tracer as *mut T) };
     let p = unsafe { from_raw_parts(p_ptr as *const usize, p_len as _) };
-    tracer.conclude_unsat(conclusion, &p);
+    tracer.conclude_unsat(conclusion, p);
 }
-
-// pub const unsafe fn from_raw_parts<'a, T>(data: *const T, len: usize) -> &'a [T] {
-//     unsafe { &*std::ptr::slice_from_raw_parts(data, len) }
-// }

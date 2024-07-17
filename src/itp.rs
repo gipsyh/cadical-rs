@@ -113,8 +113,11 @@ impl Tracer for Interpolant {
             self.aig.outputs.push(self.itp[&p[0]]);
             let (aig, map) = self.aig.coi_refine();
             self.aig = aig;
-            for (_, e) in self.var_edge.iter_mut() {
-                *e = map[&e];
+            let ve = take(&mut self.var_edge);
+            for (v, e) in ve {
+                if let Some(e) = map.get(&e) {
+                    self.var_edge.insert(v, *e);
+                }
             }
         } else {
             todo!();

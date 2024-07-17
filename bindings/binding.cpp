@@ -308,11 +308,20 @@ class RustTracer : public Tracer {
 
 extern "C" {
 
-void cadical_tracer_new(void *s, void *t, void *add_original_clause, void *add_derived_clause, void *delete_clause,
-			void *conclude_unsat)
+void *cadical_tracer_new(void *s, void *t, void *add_original_clause, void *add_derived_clause, void *delete_clause,
+			 void *conclude_unsat)
 {
 	Solver *solver = (Solver *)s;
 	RustTracer *tracer = new RustTracer(t, add_original_clause, add_derived_clause, delete_clause, conclude_unsat);
 	solver->connect_proof_tracer(tracer, true);
+	return tracer;
+}
+
+void cadical_tracer_free(void *s, void *t)
+{
+	Solver *solver = (Solver *)s;
+	RustTracer *tracer = (RustTracer *)t;
+	solver->disconnect_proof_tracer(tracer);
+	delete tracer;
 }
 }
