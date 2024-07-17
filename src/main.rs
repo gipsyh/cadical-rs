@@ -1,4 +1,4 @@
-use cadical::{itp::Interpolant, tracer::Tracer, Solver};
+use cadical::{itp::Interpolant, Solver};
 use logic_form::{Lit, Var};
 use satif::Satif;
 

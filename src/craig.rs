@@ -1,7 +1,5 @@
-use logic_form::{Clause, Lit, Var};
-use satif::Satif;
-
 use crate::{cadical_lit_to_lit, Solver};
+use logic_form::{Clause, Lit, Var};
 use std::{ffi::c_int, os::raw::c_void};
 
 extern "C" {
@@ -107,6 +105,7 @@ impl Drop for Craig {
 
 #[test]
 fn test() {
+    use satif::Satif;
     let mut solver = Solver::new();
     let mut craig = Craig::new(&mut solver);
     craig.label_var(Var::new(1), VarLabel::Global);
