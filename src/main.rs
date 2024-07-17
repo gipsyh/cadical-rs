@@ -30,19 +30,17 @@ fn main() {
     // for c in cnf {
     //     s.add_clause(&c);
     // }
-    itp.label_var(Var::new(1));
-    itp.label_var(Var::new(2));
-    itp.label_clause(false);
-    solver.add_clause(&[Lit::new(Var(0), true), Lit::new(Var(1), false)]);
-    itp.label_clause(false);
-    solver.add_clause(&[Lit::new(Var(0), false), Lit::new(Var(2), false)]);
-    itp.label_clause(false);
-    solver.add_clause(&[Lit::new(Var(1), true)]);
     itp.label_clause(true);
     solver.add_clause(&[Lit::new(Var(1), false), Lit::new(Var(2), true)]);
     itp.label_clause(true);
     solver.add_clause(&[Lit::new(Var(1), true), Lit::new(Var(3), true)]);
     itp.label_clause(true);
     solver.add_clause(&[Lit::new(Var(3), false)]);
+    itp.label_clause(false);
+    solver.add_clause(&[Lit::new(Var(0), true), Lit::new(Var(1), false)]);
+    itp.label_clause(false);
+    solver.add_clause(&[Lit::new(Var(0), false), Lit::new(Var(2), false)]);
+    itp.label_clause(false);
+    solver.add_clause(&[Lit::new(Var(1), true)]);
     dbg!(solver.solve(&[]));
 }
