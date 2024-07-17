@@ -1,4 +1,6 @@
 pub mod craig;
+pub mod itp;
+pub mod tracer;
 
 use logic_form::{Clause, Lit, Var};
 use satif::{SatResult, Satif, SatifSat, SatifUnsat};

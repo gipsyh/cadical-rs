@@ -1,8 +1,9 @@
 #include "cadical.hpp"
 #include "craigtracer.hpp"
 #include <cassert>
-using namespace CaDiCaL;
 #include "stdio.h"
+
+using namespace CaDiCaL;
 
 extern "C" {
 void *cadical_solver_new()
@@ -208,5 +209,110 @@ void cadical_craig_test()
 
 	cadical_craig_free(solver, tracer);
 	delete solver;
+}
+}
+
+class RustTracer : public Tracer {
+    private:
+	void *t;
+	void *add_original_clause_fn;
+	void *add_derived_clause_fn;
+	void *delete_clause_fn;
+	void *conclude_unsat_fn;
+
+    public:
+	RustTracer(void *_t, void *add_original_clause, void *add_derived_clause, void *delete_clause,
+		   void *conclude_unsat)
+		: t(_t)
+		, add_original_clause_fn(add_original_clause)
+		, add_derived_clause_fn(add_derived_clause)
+		, delete_clause_fn(delete_clause)
+		, conclude_unsat_fn(conclude_unsat)
+	{
+	}
+
+	~RustTracer()
+	{
+	}
+
+	void add_original_clause(uint64_t id, bool redundant, const std::vector<int> &c, bool restore)
+	{
+		((void (*)(void *, uint64_t, bool, const void *, uint64_t, bool))(add_original_clause_fn))(
+			t, id, redundant, c.data(), c.size(), restore);
+	}
+
+	void add_derived_clause(uint64_t id, bool redundant, const std::vector<int> &c,
+				const std::vector<uint64_t> &proof_chain)
+	{
+		((void (*)(void *, uint64_t, bool, const void *, uint64_t, const void *, uint64_t))(
+			add_derived_clause_fn))(t, id, redundant, c.data(), c.size(), proof_chain.data(),
+						proof_chain.size());
+	}
+
+	void delete_clause(uint64_t id, bool redundant, const std::vector<int> &c)
+	{
+		((void (*)(void *, uint64_t, bool, const void *, uint64_t))(delete_clause_fn))(t, id, redundant,
+											       c.data(), c.size());
+	}
+
+	void weaken_minus(uint64_t, const std::vector<int> &)
+	{
+	}
+
+	void strengthen(uint64_t)
+	{
+	}
+
+	void report_status(int, uint64_t)
+	{
+	}
+
+	void finalize_clause(uint64_t, const std::vector<int> &)
+	{
+	}
+
+	void begin_proof(uint64_t)
+	{
+	}
+
+	void solve_query()
+	{
+	}
+
+	void add_assumption(int)
+	{
+	}
+
+	void add_constraint(const std::vector<int> &)
+	{
+	}
+
+	void reset_assumptions()
+	{
+	}
+
+	void add_assumption_clause(uint64_t, const std::vector<int> &, const std::vector<uint64_t> &)
+	{
+	}
+
+	void conclude_unsat(ConclusionType conclusion, const std::vector<uint64_t> &proof_chain)
+	{
+		((void (*)(void *, int, const void *, uint64_t))(conclude_unsat_fn))(t, conclusion, proof_chain.data(),
+										     proof_chain.size());
+	}
+
+	void conclude_sat(const std::vector<int> &)
+	{
+	}
+};
+
+extern "C" {
+
+void cadical_tracer_new(void *s, void *t, void *add_original_clause, void *add_derived_clause, void *delete_clause,
+			void *conclude_unsat)
+{
+	Solver *solver = (Solver *)s;
+	RustTracer *tracer = new RustTracer(t, add_original_clause, add_derived_clause, delete_clause, conclude_unsat);
+	solver->connect_proof_tracer(tracer, true);
 }
 }

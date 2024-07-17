@@ -16,9 +16,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "aig"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "libc",
+ "logic-form",
+]
+
+[[package]]
 name = "cadical"
 version = "0.1.0"
 dependencies = [
+ "aig",
  "cmake",
  "logic-form",
  "satif",
@@ -26,12 +36,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.83"
+version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1174fb0b6ec23863f8b971027804a42614e347eafb0a95bf0b12cdae21fc4d0"
-dependencies = [
- "libc",
-]
+checksum = "324c74f2155653c90b04f25b2a47a8a631360cb908f92a772695f430c7e31052"
 
 [[package]]
 name = "cfg-if"

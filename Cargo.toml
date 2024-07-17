@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 logic-form = { path = "../logic-form" }
 satif = { path = "../satif" }
+aig = { path = "../aig-rs" }
 
 [build-dependencies]
 cmake = "0.1.50"
