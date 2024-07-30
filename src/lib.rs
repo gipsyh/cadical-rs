@@ -3,7 +3,7 @@ pub mod itp;
 pub mod tracer;
 
 use logic_form::{Clause, Lit, Var};
-use satif::{SatResult, Satif, SatifSat, SatifUnsat};
+use satif::Satif;
 use std::{
     collections::HashMap,
     ffi::{c_int, c_void},
@@ -34,37 +34,8 @@ fn lit_to_cadical_lit(lit: &Lit) -> i32 {
 
 fn cadical_lit_to_lit(lit: i32) -> Lit {
     let p = lit > 0;
-    let v = Var::new(lit.abs() as usize - 1);
+    let v = Var::new(lit.unsigned_abs() as usize - 1);
     Lit::new(v, p)
-}
-
-pub struct Sat {
-    solver: *mut c_void,
-}
-
-impl SatifSat for Sat {
-    fn lit_value(&self, lit: Lit) -> Option<bool> {
-        let lit = lit_to_cadical_lit(&lit);
-        let res = unsafe { cadical_solver_model_value(self.solver, lit) };
-        if res == lit {
-            Some(true)
-        } else if res == -lit {
-            Some(false)
-        } else {
-            None
-        }
-    }
-}
-
-pub struct Unsat {
-    solver: *mut c_void,
-}
-
-impl SatifUnsat for Unsat {
-    fn has(&self, lit: Lit) -> bool {
-        let lit = lit_to_cadical_lit(&lit);
-        unsafe { cadical_solver_conflict_has(self.solver, lit) }
-    }
 }
 
 pub struct Solver {
@@ -74,9 +45,6 @@ pub struct Solver {
 }
 
 impl Satif for Solver {
-    type Sat = Sat;
-    type Unsat = Unsat;
-
     #[inline]
     fn new() -> Self {
         Self {
@@ -103,28 +71,41 @@ impl Satif for Solver {
         unsafe { cadical_solver_add_clause(self.solver, clause.as_ptr() as _, clause.len() as _) }
     }
 
-    fn solve(&mut self, assumps: &[Lit]) -> SatResult<Self::Sat, Self::Unsat> {
+    fn solve(&mut self, assumps: &[Lit]) -> bool {
         let assumps: Vec<i32> = assumps.iter().map(lit_to_cadical_lit).collect();
         match unsafe {
             cadical_solver_solve(self.solver, assumps.as_ptr() as _, assumps.len() as _)
         } {
-            10 => SatResult::Sat(Sat {
-                solver: self.solver,
-            }),
-            20 => SatResult::Unsat(Unsat {
-                solver: self.solver,
-            }),
+            10 => true,
+            20 => false,
             _ => todo!(),
         }
+    }
+
+    fn sat_value(&mut self, lit: Lit) -> Option<bool> {
+        let lit = lit_to_cadical_lit(&lit);
+        let res = unsafe { cadical_solver_model_value(self.solver, lit) };
+        if res == lit {
+            Some(true)
+        } else if res == -lit {
+            Some(false)
+        } else {
+            None
+        }
+    }
+
+    fn unsat_has(&mut self, lit: Lit) -> bool {
+        let lit = lit_to_cadical_lit(&lit);
+        unsafe { cadical_solver_conflict_has(self.solver, lit) }
+    }
+
+    fn simplify(&mut self) {
+        unsafe { cadical_solver_simplify(self.solver) };
     }
 }
 
 impl Solver {
-    pub fn solve_with_constrain<'a>(
-        &'a mut self,
-        assumps: &[Lit],
-        constrain: &[Lit],
-    ) -> SatResult<Sat, Unsat> {
+    pub fn solve_with_constrain(&mut self, assumps: &[Lit], constrain: &[Lit]) -> bool {
         let constrain: Vec<i32> = constrain.iter().map(lit_to_cadical_lit).collect();
         unsafe {
             cadical_solver_constrain(self.solver, constrain.as_ptr() as _, constrain.len() as _)
@@ -137,37 +118,14 @@ impl Solver {
         unsafe { cadical_solver_freeze(self.solver, lit_to_cadical_lit(&var.lit())) }
     }
 
-    pub fn simplify(&mut self) {
-        unsafe { cadical_solver_simplify(self.solver) };
-    }
-
     pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
         match pol {
             Some(p) => {
                 let p = var.lit().not_if(!p);
                 unsafe { cadical_set_polarity(self.solver, lit_to_cadical_lit(&p)) }
             }
-            None => {
-                unsafe { cadical_unset_polarity(self.solver, lit_to_cadical_lit(&var.lit())) }
-                return;
-            }
+            None => unsafe { cadical_unset_polarity(self.solver, lit_to_cadical_lit(&var.lit())) },
         };
-    }
-
-    /// # Safety
-    /// unsafe get sat model
-    pub unsafe fn get_model(&self) -> Sat {
-        Sat {
-            solver: self.solver,
-        }
-    }
-
-    /// # Safety
-    /// unsafe get unsat core
-    pub unsafe fn get_conflict(&self) -> Unsat {
-        Unsat {
-            solver: self.solver,
-        }
     }
 
     pub fn clauses(&self) -> Vec<Clause> {
@@ -212,13 +170,12 @@ fn test() {
     solver.add_clause(&Clause::from([lit0, !lit2]));
     solver.add_clause(&Clause::from([lit1, !lit2]));
     solver.add_clause(&Clause::from([!lit0, !lit1, lit2]));
-    match solver.solve(&[lit2]) {
-        SatResult::Sat(model) => {
-            assert!(model.lit_value(lit0).unwrap());
-            assert!(model.lit_value(lit1).unwrap());
-            assert!(model.lit_value(lit2).unwrap());
-        }
-        SatResult::Unsat(_) => todo!(),
+    if solver.solve(&[lit2]) {
+        assert!(solver.sat_value(lit0).unwrap());
+        assert!(solver.sat_value(lit1).unwrap());
+        assert!(solver.sat_value(lit2).unwrap());
+    } else {
+        panic!()
     }
     // solver.simplify();
     // match solver.solve_with_constrain(&[lit2], &[!lit0]) {
