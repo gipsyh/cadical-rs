@@ -44,16 +44,17 @@ pub struct Solver {
     tracer_map: HashMap<*const c_void, *const c_void>,
 }
 
-impl Satif for Solver {
-    #[inline]
-    fn new() -> Self {
+impl Solver {
+    pub fn new() -> Self {
         Self {
             solver: unsafe { cadical_solver_new() },
             num_var: 0,
             tracer_map: HashMap::default(),
         }
     }
+}
 
+impl Satif for Solver {
     #[inline]
     fn new_var(&mut self) -> Var {
         self.num_var += 1;
