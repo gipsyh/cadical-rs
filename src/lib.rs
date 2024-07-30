@@ -102,33 +102,13 @@ impl Satif for Solver {
     fn simplify(&mut self) {
         unsafe { cadical_solver_simplify(self.solver) };
     }
-}
 
-impl Solver {
-    pub fn solve_with_constrain(&mut self, assumps: &[Lit], constrain: &[Lit]) -> bool {
-        let constrain: Vec<i32> = constrain.iter().map(lit_to_cadical_lit).collect();
-        unsafe {
-            cadical_solver_constrain(self.solver, constrain.as_ptr() as _, constrain.len() as _)
-        };
-        self.solve(assumps)
-    }
-
-    pub fn set_frozen(&mut self, var: Var, frozen: bool) {
+    fn set_frozen(&mut self, var: Var, frozen: bool) {
         assert!(frozen);
         unsafe { cadical_solver_freeze(self.solver, lit_to_cadical_lit(&var.lit())) }
     }
 
-    pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
-        match pol {
-            Some(p) => {
-                let p = var.lit().not_if(!p);
-                unsafe { cadical_set_polarity(self.solver, lit_to_cadical_lit(&p)) }
-            }
-            None => unsafe { cadical_unset_polarity(self.solver, lit_to_cadical_lit(&var.lit())) },
-        };
-    }
-
-    pub fn clauses(&self) -> Vec<Clause> {
+    fn clauses(&self) -> Vec<Clause> {
         let mut cnf = Vec::new();
         unsafe {
             let mut len = 0;
@@ -145,6 +125,26 @@ impl Solver {
             }
         }
         cnf
+    }
+}
+
+impl Solver {
+    pub fn solve_with_constrain(&mut self, assumps: &[Lit], constrain: &[Lit]) -> bool {
+        let constrain: Vec<i32> = constrain.iter().map(lit_to_cadical_lit).collect();
+        unsafe {
+            cadical_solver_constrain(self.solver, constrain.as_ptr() as _, constrain.len() as _)
+        };
+        self.solve(assumps)
+    }
+
+    pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
+        match pol {
+            Some(p) => {
+                let p = var.lit().not_if(!p);
+                unsafe { cadical_set_polarity(self.solver, lit_to_cadical_lit(&p)) }
+            }
+            None => unsafe { cadical_unset_polarity(self.solver, lit_to_cadical_lit(&var.lit())) },
+        };
     }
 }
 
