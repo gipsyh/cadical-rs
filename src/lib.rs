@@ -15,7 +15,7 @@ extern "C" {
     fn cadical_solver_add_clause(s: *mut c_void, clause: *mut c_int, len: c_int);
     fn cadical_solver_solve(s: *mut c_void, assumps: *mut c_int, len: c_int) -> c_int;
     fn cadical_solver_constrain(s: *mut c_void, constrain: *mut c_int, len: c_int);
-    fn cadical_solver_simplify(s: *mut c_void);
+    fn cadical_solver_simplify(s: *mut c_void) -> c_int;
     fn cadical_solver_freeze(s: *mut c_void, lit: c_int);
     fn cadical_set_polarity(s: *mut c_void, lit: c_int);
     fn cadical_unset_polarity(s: *mut c_void, lit: c_int);
@@ -100,8 +100,12 @@ impl Satif for Solver {
         unsafe { cadical_solver_conflict_has(self.solver, lit) }
     }
 
-    fn simplify(&mut self) {
-        unsafe { cadical_solver_simplify(self.solver) };
+    fn simplify(&mut self) -> Option<bool> {
+        match unsafe { cadical_solver_simplify(self.solver) } {
+            10 => Some(true),
+            20 => Some(false),
+            _ => None,
+        }
     }
 
     fn set_frozen(&mut self, var: Var, frozen: bool) {
