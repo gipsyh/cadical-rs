@@ -10,9 +10,9 @@ authors = ["Yuheng Su <gipsyh.icu@gmail.com>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-logic-form = { path = "../logic-form" }
-satif = { path = "../satif" }
-aig = { path = "../aig-rs" }
+logic-form = { path = "../logic-form", version = "0.2.1" }
+satif = { path = "../satif", version = "0.1.0" }
+aig = { path = "../aig-rs", version = "0.2.1" }
 
 [build-dependencies]
 cmake = "0.1.50"
