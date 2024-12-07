@@ -1,4 +1,4 @@
-use cadical::{itp::Interpolant, Solver};
+use satif_cadical::{itp::Interpolant, Solver};
 use logic_form::{Lit, Var};
 use satif::Satif;
 
