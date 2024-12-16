@@ -12,7 +12,7 @@ fn main() -> Result<(), String> {
         .unwrap();
     let src_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let out_dir = env::var("OUT_DIR").unwrap();
-    
+
     let bindings = PathBuf::from("./bindings");
     println!("cargo:rerun-if-changed=./bindings");
     Config::new(bindings).build();

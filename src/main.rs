@@ -1,6 +1,6 @@
-use satif_cadical::{itp::Interpolant, Solver};
 use logic_form::{Lit, Var};
 use satif::Satif;
+use satif_cadical::{itp::Interpolant, Solver};
 
 fn main() {
     // struct CaDiCaLTracer;
