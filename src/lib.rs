@@ -123,7 +123,7 @@ impl Satif for Solver {
                 for i in (0..clauses.len()).step_by(2) {
                     let data = clauses[i] as *mut i32;
                     let len = clauses[i + 1];
-                    let cls: Vec<_> = (0..len).map(|i| *data.add(i as usize)).collect();
+                    let cls: Vec<_> = (0..len).map(|i| *data.add(i)).collect();
                     let cls: Vec<Lit> = cls.into_iter().map(cadical_lit_to_lit).collect();
                     cnf.push(Clause::from(cls));
                 }

@@ -6,6 +6,7 @@ use std::{
     mem::take,
 };
 
+#[derive(Default)]
 pub struct Interpolant {
     b_vars: HashSet<Var>,
     var_edge: HashMap<Var, usize>,
@@ -20,17 +21,7 @@ pub struct Interpolant {
 
 impl Interpolant {
     pub fn new() -> Self {
-        Self {
-            b_vars: Default::default(),
-            var_edge: Default::default(),
-            cls_labels: Default::default(),
-            next_cls_label: Default::default(),
-            aig: Default::default(),
-            itp: Default::default(),
-            clauses: Default::default(),
-            mark: HashSet::default(),
-            handle_a: false,
-        }
+        Self::default()
     }
 
     pub fn label_clause(&mut self, k: bool) {
@@ -64,8 +55,7 @@ impl Tracer for Interpolant {
                 let e = if let Some(e) = self.var_edge.get(&l.var()) {
                     *e
                 } else {
-                    let e = self.aig.new_leaf_node();
-                    self.aig.new_input(e);
+                    let e = self.aig.new_input();
                     self.var_edge.insert(l.var(), e);
                     e
                 };

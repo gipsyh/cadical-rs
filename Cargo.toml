@@ -1,6 +1,6 @@
 [package]
 name = "satif-cadical"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 license = "MIT"
 description = "Rust wrapper for the CaDiCaL SAT solver"
@@ -12,7 +12,7 @@ authors = ["Yuheng Su <gipsyh.icu@gmail.com>"]
 [dependencies]
 logic-form = { path = "../logic-form", version = "0.2" }
 satif = { path = "../satif", version = "0.1" }
-aig = { path = "../aig-rs", version = "0.2" }
+aig = { path = "../aig-rs", version = "~0.2.4" }
 
 [build-dependencies]
 cmake = "0.1.50"

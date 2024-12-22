@@ -89,7 +89,7 @@ impl Craig {
                 let data = clauses[i] as *mut i32;
                 let len = clauses[i + 1];
                 let cls: Vec<i32> = Vec::from_raw_parts(data, len, len);
-                let cls: Vec<Lit> = cls.into_iter().map(|l| cadical_lit_to_lit(l)).collect();
+                let cls: Vec<Lit> = cls.into_iter().map(cadical_lit_to_lit).collect();
                 cnf.push(Clause::from(cls));
             }
             cnf
