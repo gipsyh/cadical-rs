@@ -9,7 +9,7 @@ use std::{
 #[derive(Default)]
 pub struct Interpolant {
     b_vars: HashSet<Var>,
-    var_edge: HashMap<Var, usize>,
+    var_edge: HashMap<Var, Var>,
     cls_labels: HashMap<usize, bool>,
     next_cls_label: Option<bool>,
     aig: Aig,
@@ -28,7 +28,7 @@ impl Interpolant {
         self.next_cls_label = Some(k)
     }
 
-    pub fn interpolant(self) -> (Aig, HashMap<Var, usize>) {
+    pub fn interpolant(self) -> (Aig, HashMap<Var, Var>) {
         (self.aig, self.var_edge)
     }
 }
@@ -55,11 +55,11 @@ impl Tracer for Interpolant {
                 let e = if let Some(e) = self.var_edge.get(&l.var()) {
                     *e
                 } else {
-                    let e = self.aig.new_input();
+                    let e = Var::new(self.aig.new_input());
                     self.var_edge.insert(l.var(), e);
                     e
                 };
-                let e = AigEdge::new(e, !l.polarity());
+                let e = AigEdge::new(e.into(), !l.polarity());
                 itp = self.aig.new_or_node(itp, e);
             }
             itp
@@ -103,7 +103,7 @@ impl Tracer for Interpolant {
             self.aig.outputs.push(self.itp[&p[0]]);
             let (aig, map) = self.aig.coi_refine();
             self.aig = aig;
-            let map: HashMap<usize, usize> = map.into_iter().map(|(k, v)| (v, k)).collect();
+            let map: HashMap<Var, Var> = map.into_iter().map(|(k, v)| (v, k)).collect();
             let ve = take(&mut self.var_edge);
             for (v, e) in ve {
                 if let Some(e) = map.get(&e) {

@@ -13,6 +13,7 @@ authors = ["Yuheng Su <gipsyh.icu@gmail.com>"]
 logic-form = { path = "../logic-form", version = "0.2" }
 satif = { path = "../satif", version = "0.1" }
 aig = { path = "../aig-rs", version = "~0.2.4" }
+ahash = "0.8.11"
 
 [build-dependencies]
 cmake = "0.1.50"
