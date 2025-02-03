@@ -23,9 +23,9 @@ fn main() {
     //         dbg!("aaaaa");
     //     }
     // }
-    let mut itp = Box::new(Interpolant::new());
+    let mut itp = Box::pin(Interpolant::new());
     let mut solver = Solver::new();
-    solver.connect_tracer(&itp);
+    solver.connect_tracer(itp.as_ref());
     // let cnf = from_dimacs_file("./counter.cnf");
     // for c in cnf {
     //     s.add_clause(&c);
@@ -43,5 +43,5 @@ fn main() {
     itp.label_clause(false);
     solver.add_clause(&[Lit::new(Var(1), true)]);
     dbg!(solver.solve(&[]));
-    solver.disconnect_tracer(&itp);
+    solver.disconnect_tracer(itp.as_ref());
 }

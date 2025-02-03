@@ -21,9 +21,9 @@ pub enum VarLabel {
     Global,
 }
 
-impl Into<u8> for VarLabel {
-    fn into(self) -> u8 {
-        match self {
+impl From<VarLabel> for u8 {
+    fn from(val: VarLabel) -> Self {
+        match val {
             VarLabel::A => 0,
             VarLabel::B => 1,
             VarLabel::Global => 2,
@@ -37,9 +37,9 @@ pub enum ClauseLabel {
     B,
 }
 
-impl Into<u8> for ClauseLabel {
-    fn into(self) -> u8 {
-        match self {
+impl From<ClauseLabel> for u8 {
+    fn from(val: ClauseLabel) -> Self {
+        match val {
             ClauseLabel::A => 0,
             ClauseLabel::B => 1,
         }

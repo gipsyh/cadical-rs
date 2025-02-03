@@ -1,6 +1,6 @@
 use crate::{cadical_lit_to_lit, Solver};
 use logic_form::Lit;
-use std::{ffi::c_void, slice::from_raw_parts};
+use std::{ffi::c_void, pin::Pin, slice::from_raw_parts};
 
 extern "C" {
     fn cadical_tracer_new(
@@ -27,8 +27,8 @@ pub trait Tracer {
 }
 
 impl Solver {
-    pub fn connect_tracer<T: Tracer>(&mut self, tracer: &Box<T>) {
-        let t = tracer.as_ref() as *const T;
+    pub fn connect_tracer<T: Tracer>(&mut self, tracer: Pin<&T>) {
+        let t = tracer.get_ref() as *const T;
         let add_original_clause = add_original_clause::<T>;
         let add_derived_clause = add_derived_clause::<T>;
         let delete_clause = delete_clause::<T>;
@@ -46,10 +46,10 @@ impl Solver {
         self.tracer_map.insert(t as *mut c_void, it);
     }
 
-    pub fn disconnect_tracer<T: Tracer>(&mut self, tracer: &Box<T>) {
+    pub fn disconnect_tracer<T: Tracer>(&mut self, tracer: Pin<&T>) {
         let it = self
             .tracer_map
-            .remove(&(tracer.as_ref() as *const T as *const c_void))
+            .remove(&(tracer.get_ref() as *const T as *const c_void))
             .unwrap();
         unsafe { cadical_tracer_free(self.solver, it) };
     }

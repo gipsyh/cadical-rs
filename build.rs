@@ -1,4 +1,5 @@
 #![feature(exit_status_error)]
+
 use cmake::Config;
 use giputils::build::copy_build;
 use std::env;
@@ -6,10 +7,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn main() -> Result<(), String> {
-    Command::new("git")
-        .args(["submodule", "update", "--init"])
-        .status()
-        .unwrap();
+    giputils::build::git_submodule_update()?;
     let out_dir = env::var("OUT_DIR").unwrap();
 
     let bindings = PathBuf::from("./bindings");
@@ -44,6 +42,9 @@ fn main() -> Result<(), String> {
     );
     println!("cargo:rustc-link-lib=static=cadical");
     println!("cargo:rustc-link-lib=static=bindings");
+    #[cfg(target_os = "linux")]
     println!("cargo:rustc-link-lib=dylib=stdc++");
+    #[cfg(target_os = "macos")]
+    println!("cargo:rustc-link-lib=dylib=c++");
     Ok(())
 }
