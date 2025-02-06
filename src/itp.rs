@@ -1,21 +1,19 @@
 use crate::tracer::Tracer;
 use aig::{Aig, AigEdge};
+use giputils::hash::{GHashMap, GHashSet};
 use logic_form::{Clause, Lit, Var};
-use std::{
-    collections::{HashMap, HashSet},
-    mem::take,
-};
+use std::mem::take;
 
 #[derive(Default)]
 pub struct Interpolant {
-    b_vars: HashSet<Var>,
-    var_edge: HashMap<Var, usize>,
-    cls_labels: HashMap<usize, bool>,
+    b_vars: GHashSet<Var>,
+    var_edge: GHashMap<Var, Var>,
+    cls_labels: GHashMap<usize, bool>,
     next_cls_label: Option<bool>,
     aig: Aig,
-    itp: HashMap<usize, AigEdge>,
-    clauses: HashMap<usize, Clause>,
-    mark: HashSet<Lit>,
+    itp: GHashMap<usize, AigEdge>,
+    clauses: GHashMap<usize, Clause>,
+    mark: GHashSet<Lit>,
     handle_a: bool,
 }
 
@@ -28,7 +26,7 @@ impl Interpolant {
         self.next_cls_label = Some(k)
     }
 
-    pub fn interpolant(self) -> (Aig, HashMap<Var, usize>) {
+    pub fn interpolant(self) -> (Aig, GHashMap<Var, Var>) {
         (self.aig, self.var_edge)
     }
 }
@@ -55,11 +53,11 @@ impl Tracer for Interpolant {
                 let e = if let Some(e) = self.var_edge.get(&l.var()) {
                     *e
                 } else {
-                    let e = self.aig.new_input();
+                    let e = Var::new(self.aig.new_input());
                     self.var_edge.insert(l.var(), e);
                     e
                 };
-                let e = AigEdge::new(e, !l.polarity());
+                let e = AigEdge::new(e.into(), !l.polarity());
                 itp = self.aig.new_or_node(itp, e);
             }
             itp
@@ -103,7 +101,7 @@ impl Tracer for Interpolant {
             self.aig.outputs.push(self.itp[&p[0]]);
             let (aig, map) = self.aig.coi_refine();
             self.aig = aig;
-            let map: HashMap<usize, usize> = map.into_iter().map(|(k, v)| (v, k)).collect();
+            let map: GHashMap<Var, Var> = map.into_iter().map(|(k, v)| (v, k)).collect();
             let ve = take(&mut self.var_edge);
             for (v, e) in ve {
                 if let Some(e) = map.get(&e) {

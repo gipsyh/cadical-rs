@@ -2,12 +2,10 @@ pub mod craig;
 pub mod itp;
 pub mod tracer;
 
+use giputils::hash::GHashMap;
 use logic_form::{Clause, Lit, Var};
 use satif::Satif;
-use std::{
-    collections::HashMap,
-    ffi::{c_int, c_void},
-};
+use std::ffi::{c_int, c_void};
 
 extern "C" {
     fn cadical_solver_new() -> *mut c_void;
@@ -41,7 +39,7 @@ fn cadical_lit_to_lit(lit: i32) -> Lit {
 pub struct Solver {
     solver: *mut c_void,
     num_var: usize,
-    tracer_map: HashMap<*const c_void, *const c_void>,
+    tracer_map: GHashMap<*const c_void, *const c_void>,
 }
 
 impl Solver {
@@ -49,7 +47,7 @@ impl Solver {
         Self {
             solver: unsafe { cadical_solver_new() },
             num_var: 0,
-            tracer_map: HashMap::default(),
+            tracer_map: GHashMap::default(),
         }
     }
 }
