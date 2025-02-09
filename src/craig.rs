@@ -1,5 +1,5 @@
 use crate::{cadical_lit_to_lit, Solver};
-use logic_form::{Clause, Lit, Var};
+use logic_form::{LitVec, Var};
 use std::{ffi::c_int, os::raw::c_void};
 
 extern "C" {
@@ -73,7 +73,7 @@ impl Craig {
         unsafe { cadical_craig_label_clause(self.craig, self.num_clause as _, label.into()) }
     }
 
-    pub fn interpolant(&mut self, next_var: usize) -> Vec<Clause> {
+    pub fn interpolant(&mut self, next_var: usize) -> Vec<LitVec> {
         unsafe {
             let mut cnf = Vec::new();
             let mut len = 0;
@@ -89,8 +89,7 @@ impl Craig {
                 let data = clauses[i] as *mut i32;
                 let len = clauses[i + 1];
                 let cls: Vec<i32> = Vec::from_raw_parts(data, len, len);
-                let cls: Vec<Lit> = cls.into_iter().map(cadical_lit_to_lit).collect();
-                cnf.push(Clause::from(cls));
+                cnf.push(LitVec::from_iter(cls.into_iter().map(cadical_lit_to_lit)));
             }
             cnf
         }
@@ -105,6 +104,7 @@ impl Drop for Craig {
 
 #[test]
 fn test() {
+    use logic_form::Lit;
     use satif::Satif;
     let mut solver = Solver::new();
     let mut craig = Craig::new(&mut solver);

@@ -1,7 +1,7 @@
 use crate::tracer::Tracer;
 use aig::{Aig, AigEdge};
 use giputils::hash::{GHashMap, GHashSet};
-use logic_form::{Clause, Lit, Var};
+use logic_form::{Lit, LitVec, Var};
 use std::mem::take;
 
 #[derive(Default)]
@@ -12,7 +12,7 @@ pub struct Interpolant {
     next_cls_label: Option<bool>,
     aig: Aig,
     itp: GHashMap<usize, AigEdge>,
-    clauses: GHashMap<usize, Clause>,
+    clauses: GHashMap<usize, LitVec>,
     mark: GHashSet<Lit>,
     handle_a: bool,
 }
@@ -63,7 +63,7 @@ impl Tracer for Interpolant {
             itp
         };
         self.itp.insert(id, itp);
-        self.clauses.insert(id, Clause::from(c));
+        self.clauses.insert(id, LitVec::from(c));
     }
 
     fn add_derived_clause(&mut self, id: usize, _redundant: bool, c: &[Lit], p: &[usize]) {
@@ -87,7 +87,7 @@ impl Tracer for Interpolant {
         }
         self.mark.clear();
         self.itp.insert(id, itp);
-        self.clauses.insert(id, Clause::from(c));
+        self.clauses.insert(id, LitVec::from(c));
     }
 
     fn delete_clause(&mut self, id: usize, _redundant: bool, _c: &[Lit]) {

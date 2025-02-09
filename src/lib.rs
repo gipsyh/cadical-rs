@@ -3,7 +3,7 @@ pub mod itp;
 pub mod tracer;
 
 use giputils::hash::GHashMap;
-use logic_form::{Clause, Lit, Var};
+use logic_form::{Lit, LitVec, Var};
 use satif::Satif;
 use std::ffi::{c_int, c_void};
 
@@ -111,7 +111,7 @@ impl Satif for Solver {
         unsafe { cadical_solver_freeze(self.solver, lit_to_cadical_lit(&var.lit())) }
     }
 
-    fn clauses(&self) -> Vec<Clause> {
+    fn clauses(&self) -> Vec<LitVec> {
         let mut cnf = Vec::new();
         unsafe {
             let mut len = 0;
@@ -122,8 +122,7 @@ impl Satif for Solver {
                     let data = clauses[i] as *mut i32;
                     let len = clauses[i + 1];
                     let cls: Vec<_> = (0..len).map(|i| *data.add(i)).collect();
-                    let cls: Vec<Lit> = cls.into_iter().map(cadical_lit_to_lit).collect();
-                    cnf.push(Clause::from(cls));
+                    cnf.push(LitVec::from_iter(cls.into_iter().map(cadical_lit_to_lit)));
                 }
             }
         }
@@ -165,14 +164,14 @@ impl Default for Solver {
 
 #[test]
 fn test() {
-    use logic_form::Clause;
+    use logic_form::LitVec;
     let mut solver = Solver::new();
     let lit0: Lit = solver.new_var().into();
     let lit1: Lit = solver.new_var().into();
     let lit2: Lit = solver.new_var().into();
-    solver.add_clause(&Clause::from([lit0, !lit2]));
-    solver.add_clause(&Clause::from([lit1, !lit2]));
-    solver.add_clause(&Clause::from([!lit0, !lit1, lit2]));
+    solver.add_clause(&LitVec::from([lit0, !lit2]));
+    solver.add_clause(&LitVec::from([lit1, !lit2]));
+    solver.add_clause(&LitVec::from([!lit0, !lit1, lit2]));
     if solver.solve(&[lit2]) {
         assert!(solver.sat_value(lit0).unwrap());
         assert!(solver.sat_value(lit1).unwrap());
