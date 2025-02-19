@@ -81,7 +81,7 @@ impl Satif for Solver {
         }
     }
 
-    fn sat_value(&mut self, lit: Lit) -> Option<bool> {
+    fn sat_value(&self, lit: Lit) -> Option<bool> {
         let lit = lit_to_cadical_lit(&lit);
         let res = unsafe { cadical_solver_model_value(self.solver, lit) };
         if res == lit {
@@ -93,7 +93,7 @@ impl Satif for Solver {
         }
     }
 
-    fn unsat_has(&mut self, lit: Lit) -> bool {
+    fn unsat_has(&self, lit: Lit) -> bool {
         let lit = lit_to_cadical_lit(&lit);
         unsafe { cadical_solver_conflict_has(self.solver, lit) }
     }
