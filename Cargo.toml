@@ -1,7 +1,7 @@
 [package]
 name = "satif-cadical"
-version = "0.1.8"
-edition = "2021"
+version = "0.1.9"
+edition = "2024"
 license = "MIT"
 description = "Rust wrapper for the CaDiCaL SAT solver"
 repository = "https://github.com/gipsyh/cadical-rs"
@@ -10,11 +10,11 @@ authors = ["Yuheng Su <gipsyh.icu@gmail.com>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-logic-form = { path = "../logic-form", version = "0.3.0" }
+logic-form = { path = "../logic-form", version = "0.3.2" }
 satif = { path = "../satif", version = "0.2.0" }
-aig = { path = "../aig-rs", version = "0.2.9" }
-giputils = { path = "../giputils", version = "0.2.6" }
+aig = { path = "../aig-rs", version = "0.3.0" }
+giputils = { path = "../giputils", version = "0.3.0" }
 
 [build-dependencies]
 cmake = "0.1.50"
-giputils = { path = "../giputils", version = "0.2.6" }
+giputils = { path = "../giputils", version = "0.3.0" }

@@ -7,7 +7,7 @@ use logic_form::{Lit, LitVec, Var};
 use satif::Satif;
 use std::ffi::{c_int, c_void};
 
-extern "C" {
+unsafe extern "C" {
     fn cadical_solver_new() -> *mut c_void;
     fn cadical_solver_free(s: *mut c_void);
     fn cadical_solver_add_clause(s: *mut c_void, clause: *mut c_int, len: c_int);

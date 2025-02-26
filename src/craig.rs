@@ -1,8 +1,8 @@
-use crate::{cadical_lit_to_lit, Solver};
+use crate::{Solver, cadical_lit_to_lit};
 use logic_form::{LitVec, Var};
 use std::{ffi::c_int, os::raw::c_void};
 
-extern "C" {
+unsafe extern "C" {
     fn cadical_craig_new(s: *mut c_void) -> *mut c_void;
     fn cadical_craig_free(s: *mut c_void, c: *mut c_void);
     fn cadical_craig_label_var(c: *mut c_void, var: i32, t: u8);

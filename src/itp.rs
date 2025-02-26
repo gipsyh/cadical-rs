@@ -35,10 +35,11 @@ impl Tracer for Interpolant {
     fn add_original_clause(&mut self, id: usize, _redundant: bool, c: &[Lit], restore: bool) {
         // println!("o {id}, {:?}", c);
         if !restore {
-            assert!(self
-                .cls_labels
-                .insert(id, take(&mut self.next_cls_label).unwrap())
-                .is_none());
+            assert!(
+                self.cls_labels
+                    .insert(id, take(&mut self.next_cls_label).unwrap())
+                    .is_none()
+            );
         }
         let itp = if self.cls_labels[&id] {
             assert!(!self.handle_a);

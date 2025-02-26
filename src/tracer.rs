@@ -1,8 +1,8 @@
-use crate::{cadical_lit_to_lit, Solver};
+use crate::{Solver, cadical_lit_to_lit};
 use logic_form::Lit;
 use std::{ffi::c_void, pin::Pin, slice::from_raw_parts};
 
-extern "C" {
+unsafe extern "C" {
     fn cadical_tracer_new(
         s: *mut c_void,
         t: *mut c_void,
