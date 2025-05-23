@@ -25,7 +25,7 @@ fn main() -> Result<(), String> {
             .map_err(|e| e.to_string())?;
         let num_jobs = env::var("NUM_JOBS").unwrap();
         Command::new("make")
-            .arg(format!("-j{}", num_jobs))
+            .arg(format!("-j{num_jobs}"))
             .current_dir(src)
             .status()
             .map_err(|e| e.to_string())?
