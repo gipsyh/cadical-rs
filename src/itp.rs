@@ -46,10 +46,10 @@ impl Tracer for Interpolant {
             for l in c.iter() {
                 self.b_vars.insert(l.var());
             }
-            AigEdge::constant_edge(true)
+            AigEdge::constant(true)
         } else {
             self.handle_a = true;
-            let mut itp = AigEdge::constant_edge(false);
+            let mut itp = AigEdge::constant(false);
             for l in c.iter().filter(|l| self.b_vars.contains(&l.var())) {
                 let e = if let Some(e) = self.var_edge.get(&l.var()) {
                     *e
