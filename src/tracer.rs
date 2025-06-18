@@ -1,5 +1,5 @@
 use crate::{Solver, cadical_lit_to_lit};
-use logic_form::Lit;
+use logicrs::Lit;
 use std::{ffi::c_void, pin::Pin, slice::from_raw_parts};
 
 unsafe extern "C" {

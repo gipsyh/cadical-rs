@@ -1,5 +1,5 @@
 use crate::{Solver, cadical_lit_to_lit};
-use logic_form::{LitVec, Var};
+use logicrs::{LitVec, Var};
 use std::{ffi::c_int, os::raw::c_void};
 
 unsafe extern "C" {
@@ -104,8 +104,7 @@ impl Drop for Craig {
 
 #[test]
 fn test() {
-    use logic_form::Lit;
-    use satif::Satif;
+    use logicrs::{Lit, satif::Satif};
     let mut solver = Solver::new();
     let mut craig = Craig::new(&mut solver);
     craig.label_var(Var::new(1), VarLabel::Global);

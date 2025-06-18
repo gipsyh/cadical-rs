@@ -1,7 +1,7 @@
 use crate::tracer::Tracer;
 use aig::{Aig, AigEdge};
 use giputils::hash::{GHashMap, GHashSet};
-use logic_form::{Lit, LitVec, Var};
+use logicrs::{Lit, LitVec, Var};
 use std::mem::take;
 
 #[derive(Default)]

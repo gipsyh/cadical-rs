@@ -3,8 +3,7 @@ pub mod itp;
 pub mod tracer;
 
 use giputils::hash::GHashMap;
-use logic_form::{Lit, LitVec, Var};
-use satif::Satif;
+use logicrs::{Lit, LitVec, Var, satif::Satif};
 use std::ffi::{c_int, c_void};
 
 unsafe extern "C" {
@@ -164,7 +163,7 @@ impl Default for Solver {
 
 #[test]
 fn test() {
-    use logic_form::LitVec;
+    use logicrs::LitVec;
     let mut solver = Solver::new();
     let lit0: Lit = solver.new_var().into();
     let lit1: Lit = solver.new_var().into();
