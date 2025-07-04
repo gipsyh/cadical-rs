@@ -18,6 +18,8 @@ fn main() -> Result<(), String> {
     let cb_path = copy_build("cadical", |src| {
         Command::new("sh")
             .arg("configure")
+            .env("CXX", "clang++")
+            .env("CXXFLAGS", "-fPIC")
             .current_dir(src)
             .status()
             .map_err(|e| e.to_string())?
