@@ -109,6 +109,12 @@ void cadical_unset_polarity(void *s, int lit)
 	slv->unphase(lit);
 }
 
+void cadical_set_seed(void *s, int seed)
+{
+	Solver *slv = (Solver *)s;
+	slv->set("seed", seed);
+}
+
 void *cadical_craig_new(void *s)
 {
 	Solver *solver = (Solver *)s;

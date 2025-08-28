@@ -19,6 +19,7 @@ unsafe extern "C" {
     fn cadical_solver_model_value(s: *mut c_void, lit: c_int) -> c_int;
     fn cadical_solver_conflict_has(s: *mut c_void, lit: c_int) -> bool;
     fn cadical_solver_clauses(s: *mut c_void, len: *mut c_int) -> *mut c_void;
+    fn cadical_set_seed(s: *mut c_void, seed: c_int);
 }
 
 fn lit_to_cadical_lit(lit: &Lit) -> i32 {
@@ -126,6 +127,10 @@ impl Satif for Solver {
             }
         }
         cnf
+    }
+
+    fn set_seed(&mut self, seed: u64) {
+        unsafe { cadical_set_seed(self.solver, seed as _) }
     }
 }
 
