@@ -1,52 +1,35 @@
 #![feature(exit_status_error)]
-
 use cmake::Config;
-use giputils::build::copy_build;
-use std::env;
-use std::path::PathBuf;
-use std::process::Command;
 
 fn main() -> Result<(), String> {
     giputils::build::git_submodule_update()?;
-    let out_dir = env::var("OUT_DIR").unwrap();
-
-    let bindings = PathBuf::from("./bindings");
-    println!("cargo:rerun-if-changed=./bindings");
-    Config::new(bindings).build();
-
     println!("cargo:rerun-if-changed=./cadical");
-    let cb_path = copy_build("cadical", |src| {
-        Command::new("sh")
-            .arg("configure")
-            .env("CXX", "clang++")
-            .env("CXXFLAGS", "-fPIC")
-            .current_dir(src)
-            .status()
-            .map_err(|e| e.to_string())?
-            .exit_ok()
-            .map_err(|e| e.to_string())?;
-        let num_jobs = env::var("NUM_JOBS").unwrap();
-        Command::new("make")
-            .arg(format!("-j{num_jobs}"))
-            .current_dir(src)
-            .status()
-            .map_err(|e| e.to_string())?
-            .exit_ok()
-            .map_err(|e| e.to_string())
-    })?;
+    println!("cargo:rerun-if-changed=./bindings");
+    println!("cargo:rerun-if-changed=./CMakeLists.txt");
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
+    let mut cfg = Config::new(".");
+    if target_os == "windows" && target_env == "gnu" {
+        cfg.define("CMAKE_CXX_COMPILER", "x86_64-w64-mingw32-g++");
+        cfg.define("CMAKE_SYSTEM_NAME", "Windows");
+    } else {
+        cfg.define("CMAKE_CXX_COMPILER", "clang++");
+        cfg.define("CMAKE_CXX_FLAGS", "-flto");
+    }
+    cfg.define("CMAKE_BUILD_TYPE", "Release");
+    let dst = cfg.build();
     println!(
         "cargo:rustc-link-search=native={}",
-        cb_path.join("build").display()
+        dst.join("lib").display()
     );
-    println!(
-        "cargo:rustc-link-search=native={}",
-        PathBuf::from(out_dir).join("lib").display()
-    );
-    println!("cargo:rustc-link-lib=static=cadical");
-    println!("cargo:rustc-link-lib=static=bindings");
-    #[cfg(target_os = "linux")]
-    println!("cargo:rustc-link-lib=dylib=stdc++");
-    #[cfg(target_os = "macos")]
-    println!("cargo:rustc-link-lib=dylib=c++");
+    println!("cargo:rustc-link-lib=static=satif-cadical");
+    if target_os == "linux" {
+        println!("cargo:rustc-link-lib=dylib=stdc++");
+    } else if target_os == "macos" {
+        println!("cargo:rustc-link-lib=dylib=c++");
+    } else if target_os == "windows" && target_env == "gnu" {
+        println!("cargo:rustc-link-search=native=/usr/x86_64-w64-mingw32/lib");
+        println!("cargo:rustc-link-lib=static=stdc++");
+    }
     Ok(())
 }
