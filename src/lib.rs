@@ -36,13 +36,13 @@ fn cadical_lit_to_lit(lit: i32) -> Lit {
     Lit::new(v, p)
 }
 
-pub struct Solver {
+pub struct CaDiCaL {
     solver: *mut c_void,
     num_var: usize,
     tracer_map: GHashMap<*const c_void, *const c_void>,
 }
 
-impl Solver {
+impl CaDiCaL {
     pub fn new() -> Self {
         Self {
             solver: unsafe { cadical_solver_new() },
@@ -52,7 +52,7 @@ impl Solver {
     }
 }
 
-impl Satif for Solver {
+impl Satif for CaDiCaL {
     #[inline]
     fn new_var(&mut self) -> Var {
         self.num_var += 1;
@@ -134,7 +134,7 @@ impl Satif for Solver {
     }
 }
 
-impl Solver {
+impl CaDiCaL {
     pub fn solve_with_constrain(&mut self, assumps: &[Lit], constrain: &[Lit]) -> bool {
         let constrain: Vec<i32> = constrain.iter().map(lit_to_cadical_lit).collect();
         unsafe {
@@ -154,22 +154,26 @@ impl Solver {
     }
 }
 
-impl Drop for Solver {
+impl Drop for CaDiCaL {
     fn drop(&mut self) {
         unsafe { cadical_solver_free(self.solver) };
     }
 }
 
-impl Default for Solver {
+impl Default for CaDiCaL {
     fn default() -> Self {
         Self::new()
     }
 }
 
+unsafe impl Sync for CaDiCaL {}
+
+unsafe impl Send for CaDiCaL {}
+
 #[test]
 fn test() {
     use logicrs::LitVec;
-    let mut solver = Solver::new();
+    let mut solver = CaDiCaL::new();
     let lit0: Lit = solver.new_var().into();
     let lit1: Lit = solver.new_var().into();
     let lit2: Lit = solver.new_var().into();

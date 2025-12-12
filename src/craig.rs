@@ -1,4 +1,4 @@
-use crate::{Solver, cadical_lit_to_lit};
+use crate::{CaDiCaL, cadical_lit_to_lit};
 use logicrs::{LitVec, Var};
 use std::{ffi::c_int, os::raw::c_void};
 
@@ -53,7 +53,7 @@ pub struct Craig {
 }
 
 impl Craig {
-    pub fn new(solver: &mut Solver) -> Self {
+    pub fn new(solver: &mut CaDiCaL) -> Self {
         let craig = unsafe { cadical_craig_new(solver.solver) };
         Self {
             solver: solver.solver,
@@ -105,7 +105,7 @@ impl Drop for Craig {
 #[test]
 fn test() {
     use logicrs::{Lit, satif::Satif};
-    let mut solver = Solver::new();
+    let mut solver = CaDiCaL::new();
     let mut craig = Craig::new(&mut solver);
     craig.label_var(Var::new(1), VarLabel::Global);
     craig.label_var(Var::new(2), VarLabel::Global);
