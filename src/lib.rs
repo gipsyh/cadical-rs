@@ -81,6 +81,24 @@ impl Satif for CaDiCaL {
         }
     }
 
+    fn solve_with_constraint(&mut self, assumps: &[Lit], constraint: Vec<LitVec>) -> bool {
+        if constraint.len() > 1 {
+            panic!("cadical does not support multiple temporary constraints");
+        }
+        let assumps: Vec<i32> = assumps.iter().map(lit_to_cadical_lit).collect();
+        let constraint: Vec<i32> = constraint[0].iter().map(lit_to_cadical_lit).collect();
+        unsafe {
+            cadical_solver_constrain(self.solver, constraint.as_ptr() as _, constraint.len() as _)
+        };
+        match unsafe {
+            cadical_solver_solve(self.solver, assumps.as_ptr() as _, assumps.len() as _)
+        } {
+            10 => true,
+            20 => false,
+            _ => todo!(),
+        }
+    }
+
     fn sat_value(&self, lit: Lit) -> Option<bool> {
         let lit = lit_to_cadical_lit(&lit);
         let res = unsafe { cadical_solver_model_value(self.solver, lit) };
@@ -135,14 +153,6 @@ impl Satif for CaDiCaL {
 }
 
 impl CaDiCaL {
-    pub fn solve_with_constrain(&mut self, assumps: &[Lit], constrain: &[Lit]) -> bool {
-        let constrain: Vec<i32> = constrain.iter().map(lit_to_cadical_lit).collect();
-        unsafe {
-            cadical_solver_constrain(self.solver, constrain.as_ptr() as _, constrain.len() as _)
-        };
-        self.solve(assumps)
-    }
-
     pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
         match pol {
             Some(p) => {
@@ -187,15 +197,6 @@ fn test() {
     } else {
         panic!()
     }
-    // solver.simplify();
-    // match solver.solve_with_constrain(&[lit2], &[!lit0]) {
-    //     SatResult::Sat(_) => panic!(),
-    //     SatResult::Unsat(conflict) => {
-    //         assert!(conflict.has(lit2));
-    //     }
-    // }
-    // match solver.solve(&[lit2]) {
-    //     SatResult::Sat(_) => {}
-    //     SatResult::Unsat(_) => todo!(),
-    // }
+    assert!(!solver.solve_with_constraint(&[lit2], vec![LitVec::from([!lit0])]));
+    assert!(solver.unsat_has(lit2));
 }
