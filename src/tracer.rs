@@ -1,4 +1,4 @@
-use crate::{Solver, cadical_lit_to_lit};
+use crate::{CaDiCaL, cadical_lit_to_lit};
 use logicrs::Lit;
 use std::{ffi::c_void, pin::Pin, slice::from_raw_parts};
 
@@ -26,7 +26,7 @@ pub trait Tracer {
     fn conclude_unsat(&mut self, conclusion: i32, p: &[usize]) {}
 }
 
-impl Solver {
+impl CaDiCaL {
     pub fn connect_tracer<T: Tracer>(&mut self, tracer: Pin<&T>) {
         let t = tracer.get_ref() as *const T;
         let add_original_clause = add_original_clause::<T>;

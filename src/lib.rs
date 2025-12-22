@@ -36,13 +36,13 @@ fn cadical_lit_to_lit(lit: i32) -> Lit {
     Lit::new(v, p)
 }
 
-pub struct Solver {
+pub struct CaDiCaL {
     solver: *mut c_void,
     num_var: usize,
     tracer_map: GHashMap<*const c_void, *const c_void>,
 }
 
-impl Solver {
+impl CaDiCaL {
     pub fn new() -> Self {
         Self {
             solver: unsafe { cadical_solver_new() },
@@ -52,7 +52,7 @@ impl Solver {
     }
 }
 
-impl Satif for Solver {
+impl Satif for CaDiCaL {
     #[inline]
     fn new_var(&mut self) -> Var {
         self.num_var += 1;
@@ -72,6 +72,24 @@ impl Satif for Solver {
 
     fn solve(&mut self, assumps: &[Lit]) -> bool {
         let assumps: Vec<i32> = assumps.iter().map(lit_to_cadical_lit).collect();
+        match unsafe {
+            cadical_solver_solve(self.solver, assumps.as_ptr() as _, assumps.len() as _)
+        } {
+            10 => true,
+            20 => false,
+            _ => todo!(),
+        }
+    }
+
+    fn solve_with_constraint(&mut self, assumps: &[Lit], constraint: Vec<LitVec>) -> bool {
+        if constraint.len() > 1 {
+            panic!("cadical does not support multiple temporary constraints");
+        }
+        let assumps: Vec<i32> = assumps.iter().map(lit_to_cadical_lit).collect();
+        let constraint: Vec<i32> = constraint[0].iter().map(lit_to_cadical_lit).collect();
+        unsafe {
+            cadical_solver_constrain(self.solver, constraint.as_ptr() as _, constraint.len() as _)
+        };
         match unsafe {
             cadical_solver_solve(self.solver, assumps.as_ptr() as _, assumps.len() as _)
         } {
@@ -134,15 +152,7 @@ impl Satif for Solver {
     }
 }
 
-impl Solver {
-    pub fn solve_with_constrain(&mut self, assumps: &[Lit], constrain: &[Lit]) -> bool {
-        let constrain: Vec<i32> = constrain.iter().map(lit_to_cadical_lit).collect();
-        unsafe {
-            cadical_solver_constrain(self.solver, constrain.as_ptr() as _, constrain.len() as _)
-        };
-        self.solve(assumps)
-    }
-
+impl CaDiCaL {
     pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
         match pol {
             Some(p) => {
@@ -154,22 +164,26 @@ impl Solver {
     }
 }
 
-impl Drop for Solver {
+impl Drop for CaDiCaL {
     fn drop(&mut self) {
         unsafe { cadical_solver_free(self.solver) };
     }
 }
 
-impl Default for Solver {
+impl Default for CaDiCaL {
     fn default() -> Self {
         Self::new()
     }
 }
 
+unsafe impl Sync for CaDiCaL {}
+
+unsafe impl Send for CaDiCaL {}
+
 #[test]
 fn test() {
     use logicrs::LitVec;
-    let mut solver = Solver::new();
+    let mut solver = CaDiCaL::new();
     let lit0: Lit = solver.new_var().into();
     let lit1: Lit = solver.new_var().into();
     let lit2: Lit = solver.new_var().into();
@@ -183,15 +197,6 @@ fn test() {
     } else {
         panic!()
     }
-    // solver.simplify();
-    // match solver.solve_with_constrain(&[lit2], &[!lit0]) {
-    //     SatResult::Sat(_) => panic!(),
-    //     SatResult::Unsat(conflict) => {
-    //         assert!(conflict.has(lit2));
-    //     }
-    // }
-    // match solver.solve(&[lit2]) {
-    //     SatResult::Sat(_) => {}
-    //     SatResult::Unsat(_) => todo!(),
-    // }
+    assert!(!solver.solve_with_constraint(&[lit2], vec![LitVec::from([!lit0])]));
+    assert!(solver.unsat_has(lit2));
 }
