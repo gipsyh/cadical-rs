@@ -1,12 +1,10 @@
-#![feature(exit_status_error)]
-
 use cmake::Config;
 use giputils::build::copy_build;
-use std::env;
 use std::path::PathBuf;
 use std::process::Command;
+use std::{env, io};
 
-fn main() -> Result<(), String> {
+fn main() -> io::Result<()> {
     giputils::build::git_submodule_update()?;
     let out_dir = env::var("OUT_DIR").unwrap();
 
@@ -16,23 +14,30 @@ fn main() -> Result<(), String> {
 
     println!("cargo:rerun-if-changed=./cadical");
     let cb_path = copy_build("cadical", |src| {
-        Command::new("sh")
+        let status = Command::new("sh")
             .arg("configure")
             .env("CXX", "clang++")
             .env("CXXFLAGS", "-fPIC")
             .current_dir(src)
-            .status()
-            .map_err(|e| e.to_string())?
-            .exit_ok()
-            .map_err(|e| e.to_string())?;
+            .status()?;
+        if !status.success() {
+            return Err(io::Error::other(format!(
+                "configure failed with status: {}",
+                status
+            )));
+        }
         let num_jobs = env::var("NUM_JOBS").unwrap();
-        Command::new("make")
+        let status = Command::new("make")
             .arg(format!("-j{num_jobs}"))
             .current_dir(src)
-            .status()
-            .map_err(|e| e.to_string())?
-            .exit_ok()
-            .map_err(|e| e.to_string())
+            .status()?;
+        if !status.success() {
+            return Err(io::Error::other(format!(
+                "make failed with status: {}",
+                status
+            )));
+        }
+        Ok(())
     })?;
     println!(
         "cargo:rustc-link-search=native={}",
