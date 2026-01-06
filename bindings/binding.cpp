@@ -73,6 +73,12 @@ void cadical_solver_freeze(void *s, int lit)
 	slv->freeze(lit);
 }
 
+void cadical_terminate(void *s)
+{
+	Solver *slv = (Solver *)s;
+	slv->terminate();
+}
+
 struct ClauseIter : ClauseIterator {
 	bool clause(const std::vector<int> &c)
 	{

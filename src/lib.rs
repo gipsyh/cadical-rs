@@ -2,7 +2,7 @@ pub mod craig;
 pub mod itp;
 pub mod tracer;
 
-use giputils::hash::GHashMap;
+use giputils::{StopCtrl, hash::GHashMap};
 use logicrs::{Lit, LitVec, Var, satif::Satif};
 use std::ffi::{c_int, c_void};
 
@@ -20,6 +20,7 @@ unsafe extern "C" {
     fn cadical_solver_conflict_has(s: *mut c_void, lit: c_int) -> bool;
     fn cadical_solver_clauses(s: *mut c_void, len: *mut c_int) -> *mut c_void;
     fn cadical_set_seed(s: *mut c_void, seed: c_int);
+    fn cadical_terminate(s: *mut c_void);
 }
 
 fn lit_to_cadical_lit(lit: &Lit) -> i32 {
@@ -82,20 +83,30 @@ impl Satif for CaDiCaL {
     }
 
     fn solve_with_constraint(&mut self, assumps: &[Lit], constraint: Vec<LitVec>) -> bool {
+        self.try_solve(assumps, constraint).unwrap()
+    }
+
+    fn try_solve(&mut self, assumps: &[Lit], constraint: Vec<LitVec>) -> Option<bool> {
         if constraint.len() > 1 {
             panic!("cadical does not support multiple temporary constraints");
         }
         let assumps: Vec<i32> = assumps.iter().map(lit_to_cadical_lit).collect();
-        let constraint: Vec<i32> = constraint[0].iter().map(lit_to_cadical_lit).collect();
-        unsafe {
-            cadical_solver_constrain(self.solver, constraint.as_ptr() as _, constraint.len() as _)
+        if !constraint.is_empty() {
+            let constraint: Vec<i32> = constraint[0].iter().map(lit_to_cadical_lit).collect();
+            unsafe {
+                cadical_solver_constrain(
+                    self.solver,
+                    constraint.as_ptr() as _,
+                    constraint.len() as _,
+                )
+            }
         };
         match unsafe {
             cadical_solver_solve(self.solver, assumps.as_ptr() as _, assumps.len() as _)
         } {
-            10 => true,
-            20 => false,
-            _ => todo!(),
+            10 => Some(true),
+            20 => Some(false),
+            _ => None,
         }
     }
 
@@ -150,6 +161,12 @@ impl Satif for CaDiCaL {
     fn set_seed(&mut self, seed: u64) {
         unsafe { cadical_set_seed(self.solver, seed as _) }
     }
+
+    fn get_stop_ctrl(&mut self) -> Box<dyn StopCtrl> {
+        Box::new(CaDiCaLStopCtrl {
+            solver: self.solver,
+        })
+    }
 }
 
 impl CaDiCaL {
@@ -179,6 +196,16 @@ impl Default for CaDiCaL {
 unsafe impl Sync for CaDiCaL {}
 
 unsafe impl Send for CaDiCaL {}
+
+struct CaDiCaLStopCtrl {
+    solver: *mut c_void,
+}
+
+impl StopCtrl for CaDiCaLStopCtrl {
+    fn stop(&mut self) {
+        unsafe { cadical_terminate(self.solver) }
+    }
+}
 
 #[test]
 fn test() {
