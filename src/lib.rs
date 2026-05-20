@@ -1,5 +1,5 @@
 use giputils::StopCtrl;
-use logicrs::{Lit, LitVec, Var, satif::Satif};
+use logicrs::{Lit, LitVec, Var, VarMap, satif::Satif};
 use std::ffi::{c_int, c_void};
 
 unsafe extern "C" {
@@ -20,23 +20,11 @@ unsafe extern "C" {
     fn cadical_terminate(s: *mut c_void);
 }
 
-fn lit_to_cadical_lit(lit: &Lit) -> i32 {
-    let mut res = Into::<usize>::into(lit.var()) as i32 + 1;
-    if !lit.polarity() {
-        res = -res;
-    }
-    res
-}
-
-fn cadical_lit_to_lit(lit: i32) -> Lit {
-    let p = lit > 0;
-    let v = Var::new(lit.unsigned_abs() as usize - 1);
-    Lit::new(v, p)
-}
-
 pub struct CaDiCaL {
     solver: *mut c_void,
     num_var: usize,
+    var2cadical_var: VarMap<Var>,
+    cadical_var2var: VarMap<Option<Var>>,
 }
 
 impl CaDiCaL {
@@ -44,7 +32,39 @@ impl CaDiCaL {
         Self {
             solver: unsafe { cadical_solver_new() },
             num_var: 0,
+            var2cadical_var: VarMap::new(),
+            cadical_var2var: VarMap::new(),
         }
+    }
+
+    #[inline]
+    fn var_to_cadical_var(&self, var: Var) -> Var {
+        assert!(usize::from(var) < self.num_var);
+        self.var2cadical_var[var]
+    }
+
+    #[inline]
+    fn lit_to_cadical_lit(&self, lit: &Lit) -> i32 {
+        let mut res = usize::from(self.var_to_cadical_var(lit.var())) as i32 + 1;
+        if !lit.polarity() {
+            res = -res;
+        }
+        res
+    }
+
+    #[inline]
+    fn cadical_var_to_var(&self, cadical_var: Var) -> Option<Var> {
+        self.cadical_var2var
+            .get(usize::from(cadical_var))
+            .and_then(|var| *var)
+    }
+
+    #[inline]
+    fn cadical_lit_to_lit(&self, lit: i32) -> Option<Lit> {
+        let p = lit > 0;
+        let cadical_var = Var::new(lit.unsigned_abs() as usize - 1);
+        self.cadical_var_to_var(cadical_var)
+            .map(|var| Lit::new(var, p))
     }
 }
 
@@ -52,9 +72,19 @@ impl Satif for CaDiCaL {
     #[inline]
     fn new_var(&mut self) -> Var {
         let cadical_var = unsafe { cadical_solver_new_var(self.solver) };
+        assert!(cadical_var > 0);
+        let cadical_var = Var::new(cadical_var as usize - 1);
+        let var = Var::new(self.num_var);
+
+        self.var2cadical_var.reserve(var);
+        self.var2cadical_var[var] = cadical_var;
+
+        self.cadical_var2var.reserve(cadical_var);
+        debug_assert!(self.cadical_var2var[cadical_var].is_none());
+        self.cadical_var2var[cadical_var] = Some(var);
+
         self.num_var += 1;
-        debug_assert_eq!(self.num_var, cadical_var as usize);
-        Var::new(self.num_var - 1)
+        var
     }
 
     #[inline]
@@ -64,12 +94,18 @@ impl Satif for CaDiCaL {
 
     #[inline]
     fn add_clause(&mut self, clause: &[Lit]) {
-        let clause: Vec<i32> = clause.iter().map(lit_to_cadical_lit).collect();
+        let clause: Vec<i32> = clause
+            .iter()
+            .map(|lit| self.lit_to_cadical_lit(lit))
+            .collect();
         unsafe { cadical_solver_add_clause(self.solver, clause.as_ptr() as _, clause.len() as _) }
     }
 
     fn solve(&mut self, assumps: &[Lit]) -> bool {
-        let assumps: Vec<i32> = assumps.iter().map(lit_to_cadical_lit).collect();
+        let assumps: Vec<i32> = assumps
+            .iter()
+            .map(|lit| self.lit_to_cadical_lit(lit))
+            .collect();
         match unsafe {
             cadical_solver_solve(self.solver, assumps.as_ptr() as _, assumps.len() as _)
         } {
@@ -87,9 +123,15 @@ impl Satif for CaDiCaL {
         if constraint.len() > 1 {
             panic!("cadical does not support multiple temporary constraints");
         }
-        let assumps: Vec<i32> = assumps.iter().map(lit_to_cadical_lit).collect();
+        let assumps: Vec<i32> = assumps
+            .iter()
+            .map(|lit| self.lit_to_cadical_lit(lit))
+            .collect();
         if !constraint.is_empty() {
-            let constraint: Vec<i32> = constraint[0].iter().map(lit_to_cadical_lit).collect();
+            let constraint: Vec<i32> = constraint[0]
+                .iter()
+                .map(|lit| self.lit_to_cadical_lit(lit))
+                .collect();
             unsafe {
                 cadical_solver_constrain(
                     self.solver,
@@ -108,7 +150,7 @@ impl Satif for CaDiCaL {
     }
 
     fn sat_value(&self, lit: Lit) -> Option<bool> {
-        let lit = lit_to_cadical_lit(&lit);
+        let lit = self.lit_to_cadical_lit(&lit);
         let res = unsafe { cadical_solver_model_value(self.solver, lit) };
         if res == lit {
             Some(true)
@@ -120,7 +162,7 @@ impl Satif for CaDiCaL {
     }
 
     fn unsat_has(&self, lit: Lit) -> bool {
-        let lit = lit_to_cadical_lit(&lit);
+        let lit = self.lit_to_cadical_lit(&lit);
         unsafe { cadical_solver_conflict_has(self.solver, lit) }
     }
 
@@ -134,7 +176,7 @@ impl Satif for CaDiCaL {
 
     fn set_frozen(&mut self, var: Var, frozen: bool) {
         assert!(frozen);
-        unsafe { cadical_solver_freeze(self.solver, lit_to_cadical_lit(&var.lit())) }
+        unsafe { cadical_solver_freeze(self.solver, self.lit_to_cadical_lit(&var.lit())) }
     }
 
     fn clauses(&self) -> Vec<LitVec> {
@@ -148,7 +190,11 @@ impl Satif for CaDiCaL {
                     let data = clauses[i] as *mut i32;
                     let len = clauses[i + 1];
                     let cls: Vec<_> = (0..len).map(|i| *data.add(i)).collect();
-                    cnf.push(LitVec::from_iter(cls.into_iter().map(cadical_lit_to_lit)));
+                    cnf.push(LitVec::from_iter(cls.into_iter().map(|lit| {
+                        self.cadical_lit_to_lit(lit).unwrap_or_else(|| {
+                            panic!("cadical clause contains unmapped variable: {lit}")
+                        })
+                    })));
                 }
             }
         }
@@ -171,9 +217,11 @@ impl CaDiCaL {
         match pol {
             Some(p) => {
                 let p = var.lit().not_if(!p);
-                unsafe { cadical_set_polarity(self.solver, lit_to_cadical_lit(&p)) }
+                unsafe { cadical_set_polarity(self.solver, self.lit_to_cadical_lit(&p)) }
             }
-            None => unsafe { cadical_unset_polarity(self.solver, lit_to_cadical_lit(&var.lit())) },
+            None => unsafe {
+                cadical_unset_polarity(self.solver, self.lit_to_cadical_lit(&var.lit()))
+            },
         };
     }
 }
