@@ -8,6 +8,7 @@ use std::ffi::{c_int, c_void};
 
 unsafe extern "C" {
     fn cadical_solver_new() -> *mut c_void;
+    fn cadical_solver_new_var(s: *mut c_void) -> c_int;
     fn cadical_solver_free(s: *mut c_void);
     fn cadical_solver_add_clause(s: *mut c_void, clause: *mut c_int, len: c_int);
     fn cadical_solver_solve(s: *mut c_void, assumps: *mut c_int, len: c_int) -> c_int;
@@ -56,7 +57,9 @@ impl CaDiCaL {
 impl Satif for CaDiCaL {
     #[inline]
     fn new_var(&mut self) -> Var {
+        let cadical_var = unsafe { cadical_solver_new_var(self.solver) };
         self.num_var += 1;
+        debug_assert_eq!(self.num_var, cadical_var as usize);
         Var::new(self.num_var - 1)
     }
 

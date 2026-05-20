@@ -11,6 +11,12 @@ void *cadical_solver_new()
 	return new Solver();
 }
 
+int cadical_solver_new_var(void *s)
+{
+	Solver *slv = (Solver *)s;
+	return slv->declare_one_more_variable();
+}
+
 void cadical_solver_free(void *s)
 {
 	Solver *slv = (Solver *)s;
@@ -175,6 +181,7 @@ void *cadical_craig_create_craig_interpolant(void *c, int *next_var, int *len)
 void cadical_craig_test()
 {
 	CaDiCaL::Solver *solver = new CaDiCaL::Solver();
+	solver->declare_more_variables(4);
 	CaDiCraig::CraigTracer *tracer = (CaDiCraig::CraigTracer *)cadical_craig_new(solver);
 
 	cadical_craig_label_var(tracer, 1, 0);
@@ -247,43 +254,43 @@ class RustTracer : public Tracer {
 	{
 	}
 
-	void add_original_clause(uint64_t id, bool redundant, const std::vector<int> &c, bool restore)
+	void add_original_clause(int64_t id, bool redundant, const std::vector<int> &c, bool restore)
 	{
 		((void (*)(void *, uint64_t, bool, const void *, uint64_t, bool))(add_original_clause_fn))(
-			t, id, redundant, c.data(), c.size(), restore);
+			t, (uint64_t)id, redundant, c.data(), c.size(), restore);
 	}
 
-	void add_derived_clause(uint64_t id, bool redundant, const std::vector<int> &c,
-				const std::vector<uint64_t> &proof_chain)
+	void add_derived_clause(int64_t id, bool redundant, int witness, const std::vector<int> &c,
+				const std::vector<int64_t> &proof_chain)
 	{
 		((void (*)(void *, uint64_t, bool, const void *, uint64_t, const void *, uint64_t))(
-			add_derived_clause_fn))(t, id, redundant, c.data(), c.size(), proof_chain.data(),
+			add_derived_clause_fn))(t, (uint64_t)id, redundant, c.data(), c.size(), proof_chain.data(),
 						proof_chain.size());
 	}
 
-	void delete_clause(uint64_t id, bool redundant, const std::vector<int> &c)
+	void delete_clause(int64_t id, bool redundant, const std::vector<int> &c)
 	{
-		((void (*)(void *, uint64_t, bool, const void *, uint64_t))(delete_clause_fn))(t, id, redundant,
+		((void (*)(void *, uint64_t, bool, const void *, uint64_t))(delete_clause_fn))(t, (uint64_t)id, redundant,
 											       c.data(), c.size());
 	}
 
-	void weaken_minus(uint64_t, const std::vector<int> &)
+	void weaken_minus(int64_t, const std::vector<int> &)
 	{
 	}
 
-	void strengthen(uint64_t)
+	void strengthen(int64_t)
 	{
 	}
 
-	void report_status(int, uint64_t)
+	void report_status(int, int64_t)
 	{
 	}
 
-	void finalize_clause(uint64_t, const std::vector<int> &)
+	void finalize_clause(int64_t, const std::vector<int> &)
 	{
 	}
 
-	void begin_proof(uint64_t)
+	void begin_proof(int64_t)
 	{
 	}
 
@@ -303,11 +310,11 @@ class RustTracer : public Tracer {
 	{
 	}
 
-	void add_assumption_clause(uint64_t, const std::vector<int> &, const std::vector<uint64_t> &)
+	void add_assumption_clause(int64_t, const std::vector<int> &, const std::vector<int64_t> &)
 	{
 	}
 
-	void conclude_unsat(ConclusionType conclusion, const std::vector<uint64_t> &proof_chain)
+	void conclude_unsat(ConclusionType conclusion, const std::vector<int64_t> &proof_chain)
 	{
 		((void (*)(void *, int, const void *, uint64_t))(conclude_unsat_fn))(t, conclusion, proof_chain.data(),
 										     proof_chain.size());

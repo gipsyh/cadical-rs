@@ -47,8 +47,8 @@ fn main() -> io::Result<()> {
         "cargo:rustc-link-search=native={}",
         PathBuf::from(out_dir).join("lib").display()
     );
-    println!("cargo:rustc-link-lib=static=cadical");
     println!("cargo:rustc-link-lib=static=bindings");
+    println!("cargo:rustc-link-lib=static=cadical");
     #[cfg(target_os = "linux")]
     println!("cargo:rustc-link-lib=dylib=stdc++");
     #[cfg(target_os = "macos")]
