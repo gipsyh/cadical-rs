@@ -1,8 +1,4 @@
-pub mod craig;
-pub mod itp;
-pub mod tracer;
-
-use giputils::{StopCtrl, hash::GHashMap};
+use giputils::StopCtrl;
 use logicrs::{Lit, LitVec, Var, satif::Satif};
 use std::ffi::{c_int, c_void};
 
@@ -41,7 +37,6 @@ fn cadical_lit_to_lit(lit: i32) -> Lit {
 pub struct CaDiCaL {
     solver: *mut c_void,
     num_var: usize,
-    tracer_map: GHashMap<*const c_void, *const c_void>,
 }
 
 impl CaDiCaL {
@@ -49,7 +44,6 @@ impl CaDiCaL {
         Self {
             solver: unsafe { cadical_solver_new() },
             num_var: 0,
-            tracer_map: GHashMap::default(),
         }
     }
 }
