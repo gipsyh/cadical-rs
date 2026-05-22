@@ -2,7 +2,7 @@ pub mod craig;
 pub mod itp;
 pub mod tracer;
 
-use giputils::{StopCtrl, hash::GHashMap};
+use giputils::{TerminateCtrl, hash::GHashMap};
 use logicrs::{Lit, LitVec, Var, satif::Satif};
 use std::ffi::{c_int, c_void};
 
@@ -162,8 +162,8 @@ impl Satif for CaDiCaL {
         unsafe { cadical_set_seed(self.solver, seed as _) }
     }
 
-    fn get_stop_ctrl(&mut self) -> Box<dyn StopCtrl> {
-        Box::new(CaDiCaLStopCtrl {
+    fn get_terminate_ctrl(&mut self) -> Box<dyn TerminateCtrl> {
+        Box::new(CaDiCaLTerminateCtrl {
             solver: self.solver,
         })
     }
@@ -197,12 +197,15 @@ unsafe impl Sync for CaDiCaL {}
 
 unsafe impl Send for CaDiCaL {}
 
-struct CaDiCaLStopCtrl {
+struct CaDiCaLTerminateCtrl {
     solver: *mut c_void,
 }
 
-impl StopCtrl for CaDiCaLStopCtrl {
-    fn stop(&mut self) {
+unsafe impl Send for CaDiCaLTerminateCtrl {}
+unsafe impl Sync for CaDiCaLTerminateCtrl {}
+
+impl TerminateCtrl for CaDiCaLTerminateCtrl {
+    fn terminate(&self) {
         unsafe { cadical_terminate(self.solver) }
     }
 }
