@@ -54,7 +54,7 @@ impl Tracer for Interpolant {
                 let e = if let Some(e) = self.var_edge.get(&l.var()) {
                     *e
                 } else {
-                    let e = Var::new(self.aig.new_input());
+                    let e = self.aig.new_input();
                     self.var_edge.insert(l.var(), e);
                     e
                 };
