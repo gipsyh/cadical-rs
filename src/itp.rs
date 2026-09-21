@@ -100,13 +100,13 @@ impl Tracer for Interpolant {
         if conclusion == 1 {
             assert!(p.len() == 1);
             self.aig.outputs.push(self.itp[&p[0]]);
-            let (aig, map) = self.aig.coi_refine();
+            let (aig, map) = take(&mut self.aig).coi_simplify();
             self.aig = aig;
-            let map = map.inverse();
             let ve = take(&mut self.var_edge);
             for (v, e) in ve {
-                if let Some(e) = map.get(&e) {
-                    self.var_edge.insert(v, *e);
+                let mapped = map[e];
+                if !mapped.is_none() {
+                    self.var_edge.insert(v, mapped);
                 }
             }
         } else {
