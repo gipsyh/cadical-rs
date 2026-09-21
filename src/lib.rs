@@ -9,6 +9,7 @@ use std::ffi::{c_int, c_void};
 unsafe extern "C" {
     fn cadical_solver_new() -> *mut c_void;
     fn cadical_solver_free(s: *mut c_void);
+    fn cadical_solver_reserve(s: *mut c_void, max_var: c_int);
     fn cadical_solver_add_clause(s: *mut c_void, clause: *mut c_int, len: c_int);
     fn cadical_solver_solve(s: *mut c_void, assumps: *mut c_int, len: c_int) -> c_int;
     fn cadical_solver_constrain(s: *mut c_void, constrain: *mut c_int, len: c_int);
@@ -18,7 +19,12 @@ unsafe extern "C" {
     fn cadical_unset_polarity(s: *mut c_void, lit: c_int);
     fn cadical_solver_model_value(s: *mut c_void, lit: c_int) -> c_int;
     fn cadical_solver_conflict_has(s: *mut c_void, lit: c_int) -> bool;
-    fn cadical_solver_clauses(s: *mut c_void, len: *mut c_int) -> *mut c_void;
+    fn cadical_solver_clauses(
+        s: *mut c_void,
+        state: *mut c_void,
+        callback: unsafe extern "C" fn(*mut c_void, *const c_int, usize),
+    );
+    fn cadical_solver_num_clauses(s: *mut c_void) -> usize;
     fn cadical_set_seed(s: *mut c_void, seed: c_int);
     fn cadical_terminate(s: *mut c_void);
 }
@@ -141,19 +147,27 @@ impl Satif for CaDiCaL {
     }
 
     fn clauses(&self) -> Vec<LitVec> {
-        let mut cnf = Vec::new();
+        unsafe extern "C" fn collect_clause(state: *mut c_void, data: *const c_int, len: usize) {
+            // The synchronous traversal lends the clause only for this call.
+            // Empty clauses may have a null data pointer, unlike Rust slices.
+            let clause = if len == 0 {
+                &[]
+            } else {
+                unsafe { std::slice::from_raw_parts(data, len) }
+            };
+            let cnf = unsafe { &mut *state.cast::<Vec<LitVec>>() };
+            cnf.push(clause.iter().copied().map(cadical_lit_to_lit).collect());
+        }
+        // Count first to avoid geometric growth of the outer Vec while the
+        // solver is still live. Leave one slot for an appended constant unit.
+        let count = unsafe { cadical_solver_num_clauses(self.solver) };
+        let mut cnf: Vec<LitVec> = Vec::with_capacity(count + 1);
         unsafe {
-            let mut len = 0;
-            let clauses: *mut usize = cadical_solver_clauses(self.solver, &mut len as *mut _) as _;
-            if len > 0 {
-                let clauses = Vec::from_raw_parts(clauses, len as _, len as _);
-                for i in (0..clauses.len()).step_by(2) {
-                    let data = clauses[i] as *mut i32;
-                    let len = clauses[i + 1];
-                    let cls: Vec<_> = (0..len).map(|i| *data.add(i)).collect();
-                    cnf.push(LitVec::from_iter(cls.into_iter().map(cadical_lit_to_lit)));
-                }
-            }
+            cadical_solver_clauses(
+                self.solver,
+                (&mut cnf as *mut Vec<LitVec>).cast(),
+                collect_clause,
+            );
         }
         cnf
     }
@@ -170,6 +184,14 @@ impl Satif for CaDiCaL {
 }
 
 impl CaDiCaL {
+    /// Initialize variables through `max_var` in one allocation pass. Call
+    /// before loading a large CNF to avoid repeatedly growing solver tables.
+    /// Like adding clauses, this may invalidate an existing satisfying model.
+    pub fn reserve(&mut self, max_var: Var) {
+        self.num_var = self.num_var.max(usize::from(max_var) + 1);
+        unsafe { cadical_solver_reserve(self.solver, lit_to_cadical_lit(&max_var.lit())) };
+    }
+
     pub fn set_polarity(&mut self, var: Var, pol: Option<bool>) {
         match pol {
             Some(p) => {
@@ -229,4 +251,67 @@ fn test() {
     }
     assert!(!solver.solve_with_constraint(&[lit2], vec![LitVec::from([!lit0])]));
     assert!(solver.unsat_has(lit2));
+}
+
+#[cfg(test)]
+mod clause_export_tests {
+    use super::*;
+    use logicrs::LitVvec;
+
+    #[test]
+    fn export_preserves_frozen_projection_and_owns_literals() {
+        let (a, b, hidden, output, unit) = (
+            Var(0).lit(),
+            Var(1).lit(),
+            Var(2).lit(),
+            Var(3).lit(),
+            Var(4).lit(),
+        );
+        let mut source = LitVvec::cnf_and(hidden, &[a, b]);
+        source.extend(LitVvec::cnf_assign(output, !hidden));
+        source.push(LitVec::from([!unit]));
+        let mut solver = CaDiCaL::new();
+        solver.reserve(Var(5));
+        assert_eq!(solver.num_var(), 6);
+        for clause in source.iter() {
+            solver.add_clause(clause);
+        }
+        let frozen = [a.var(), b.var(), output.var(), unit.var()];
+        for &v in &frozen {
+            solver.set_frozen(v, true);
+        }
+        solver.simplify();
+        let exported = solver.clauses();
+        for _ in 0..3 {
+            assert_eq!(solver.clauses(), exported);
+        }
+        drop(solver);
+        let projections = |clauses: &[LitVec]| {
+            let mut possible = [false; 16];
+            for bits in 0..64 {
+                if clauses.iter().all(|c| {
+                    c.iter()
+                        .any(|l| ((bits & (1 << *l.var())) != 0) == l.polarity())
+                }) {
+                    let mut projected = 0;
+                    for (bit, v) in frozen.iter().enumerate() {
+                        projected |= ((bits >> **v) & 1) << bit;
+                    }
+                    possible[projected] = true;
+                }
+            }
+            possible
+        };
+        assert_eq!(projections(&source), projections(&exported));
+    }
+
+    #[test]
+    fn export_empty_formula_and_empty_clause() {
+        let mut solver = CaDiCaL::new();
+        solver.reserve(Var(0));
+        assert!(solver.clauses().is_empty());
+        solver.add_clause(&[]);
+        assert_eq!(solver.simplify(), Some(false));
+        assert_eq!(solver.clauses(), vec![LitVec::new()]);
+    }
 }
