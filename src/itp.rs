@@ -1,5 +1,5 @@
 use crate::tracer::Tracer;
-use aig::{Aig, AigEdge};
+use aig::Aig;
 use giputils::hash::{GHashMap, GHashSet};
 use logicrs::{Lit, LitVec, Var};
 use std::mem::take;
@@ -11,7 +11,7 @@ pub struct Interpolant {
     cls_labels: GHashMap<usize, bool>,
     next_cls_label: Option<bool>,
     aig: Aig,
-    itp: GHashMap<usize, AigEdge>,
+    itp: GHashMap<usize, Lit>,
     clauses: GHashMap<usize, LitVec>,
     mark: GHashSet<Lit>,
     handle_a: bool,
@@ -46,10 +46,10 @@ impl Tracer for Interpolant {
             for l in c.iter() {
                 self.b_vars.insert(l.var());
             }
-            AigEdge::constant(true)
+            Lit::constant(true)
         } else {
             self.handle_a = true;
-            let mut itp = AigEdge::constant(false);
+            let mut itp = Lit::constant(false);
             for l in c.iter().filter(|l| self.b_vars.contains(&l.var())) {
                 let e = if let Some(e) = self.var_edge.get(&l.var()) {
                     *e
@@ -58,7 +58,7 @@ impl Tracer for Interpolant {
                     self.var_edge.insert(l.var(), e);
                     e
                 };
-                let e = AigEdge::new(e.into(), !l.polarity());
+                let e = Lit::new(e, l.polarity());
                 itp = self.aig.new_or_node(itp, e);
             }
             itp
