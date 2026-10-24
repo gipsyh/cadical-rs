@@ -1,10 +1,13 @@
 use cmake::Config;
-use giputils::build::copy_build;
+use giputils::build::{copy_build, link_cxx_stdlib};
 use std::path::PathBuf;
 use std::process::Command;
 use std::{env, io};
 
 fn main() -> io::Result<()> {
+    for var in ["CXX", "CXXFLAGS"] {
+        println!("cargo:rerun-if-env-changed={var}");
+    }
     giputils::build::git_submodule_update()?;
     let out_dir = env::var("OUT_DIR").unwrap();
 
@@ -16,8 +19,11 @@ fn main() -> io::Result<()> {
     let cb_path = copy_build("cadical", |src| {
         let status = Command::new("sh")
             .arg("configure")
-            .env("CXX", "clang++")
-            .env("CXXFLAGS", "-fPIC")
+            .arg("-fPIC")
+            .env(
+                "CXX",
+                env::var_os("CXX").unwrap_or_else(|| "clang++".into()),
+            )
             .current_dir(src)
             .status()?;
         if !status.success() {
@@ -49,9 +55,6 @@ fn main() -> io::Result<()> {
     );
     println!("cargo:rustc-link-lib=static=cadical");
     println!("cargo:rustc-link-lib=static=bindings");
-    #[cfg(target_os = "linux")]
-    println!("cargo:rustc-link-lib=dylib=stdc++");
-    #[cfg(target_os = "macos")]
-    println!("cargo:rustc-link-lib=dylib=c++");
+    link_cxx_stdlib();
     Ok(())
 }
